@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Ваши приложения
     'task_management',      # ← твоё
-    'resourse_planning',    # ← Бегимай
+    'resource_planning',    # ← Бегимай
 ]
 
 MIDDLEWARE = [
