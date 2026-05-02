@@ -6,63 +6,137 @@
     <title>Мои задачи — Канбан-доска</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        body { background: #f0f2f5; }
         .kanban-column {
-            min-height: 300px;
-            background: #f8f9fa;
-            border-radius: 8px;
+            min-height: 400px;
+            background: #e9ecef;
+            border-radius: 10px;
             padding: 15px;
         }
+        .column-header {
+            font-weight: bold;
+            text-align: center;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            color: white;
+        }
+        .header-work { background: #0d6efd; }
+        .header-review { background: #fd7e14; }
+        .header-done { background: #198754; }
+
         .task-card {
             background: white;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 12px;
             margin-bottom: 10px;
             cursor: grab;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            border-left: 4px solid #6c757d;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
         }
-        .task-card.priority-high { border-left-color: #dc3545; }
-        .task-card.priority-medium { border-left-color: #ffc107; }
-        .task-card.priority-low { border-left-color: #28a745; }
-        .task-card.priority-critical { border-left-color: #6f42c1; }
+        .task-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
         .task-card:active { cursor: grabbing; }
-        .task-card.dragging { opacity: 0.5; }
-        .kanban-column.drag-over { background: #e9ecef; }
+        .task-card.dragging { opacity: 0.4; }
+        .kanban-column.drag-over { background: #d1e7dd; }
+
+        /* Цветные полосы приоритетов */
+        .priority-high { border-left: 5px solid #dc3545; }
+        .priority-medium { border-left: 5px solid #ffc107; }
+        .priority-low { border-left: 5px solid #28a745; }
+        .priority-critical { border-left: 5px solid #6f42c1; }
+
+        .task-title { font-weight: 600; color: #212529; text-decoration: none; }
+        .task-title:hover { color: #0d6efd; }
+
+        .badge-priority {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        .badge-high { background: #dc3545; color: white; }
+        .badge-medium { background: #ffc107; color: black; }
+        .badge-low { background: #28a745; color: white; }
+        .badge-critical { background: #6f42c1; color: white; }
+
+        .filter-bar {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-dark bg-dark mb-4">
         <div class="container">
-            <span class="navbar-brand">Управление проектами</span>
+            <span class="navbar-brand">📋 Управление проектами</span>
             <span class="navbar-text text-white">👤 {{ user.username }}</span>
         </div>
     </nav>
 
     <div class="container">
-        <h2 class="mb-4">📋 Мои задачи</h2>
+        <h2 class="mb-3">Мои задачи</h2>
 
+        <!-- ФИЛЬТРЫ -->
+        <div class="filter-bar">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label class="form-label fw-bold">Проект:</label>
+                    <select name="project" class="form-select" onchange="this.form.submit()">
+                        <option value="">Все проекты</option>
+                        {% for project in projects %}
+                            <option value="{{ project.id }}" {% if project.id|stringformat:"s" == selected_project %}selected{% endif %}>
+                                {{ project.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label fw-bold">Приоритет:</label>
+                    <select name="priority" class="form-select" onchange="this.form.submit()">
+                        <option value="">Все</option>
+                        <option value="low" {% if selected_priority == 'low' %}selected{% endif %}>Низкий</option>
+                        <option value="medium" {% if selected_priority == 'medium' %}selected{% endif %}>Средний</option>
+                        <option value="high" {% if selected_priority == 'high' %}selected{% endif %}>Высокий</option>
+                        <option value="critical" {% if selected_priority == 'critical' %}selected{% endif %}>Критический</option>
+                    </select>
+                </div>
+                <div class="col-auto mt-4">
+                    <a href="{% url 'kanban-board' %}" class="btn btn-outline-secondary">Сбросить</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- КАНБАН-ДОСКА -->
         <div class="row">
             {% for status in statuses %}
-            <div class="col-md-4">
+            <div class="col-md-4 mb-3">
                 <div class="kanban-column" data-status-id="{{ status.id }}"
                      ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
-                    <h5 class="text-center mb-3">{{ status.name }}
-                        <span class="badge bg-secondary">{{ status.task_count }}</span>
-                    </h5>
+
+                    {% if status.name == 'В работе' %}
+                        <div class="column-header header-work">{{ status.name }} <span class="badge bg-light text-dark">{{ status.task_count }}</span></div>
+                    {% elif status.name == 'На проверке' %}
+                        <div class="column-header header-review">{{ status.name }} <span class="badge bg-light text-dark">{{ status.task_count }}</span></div>
+                    {% else %}
+                        <div class="column-header header-done">{{ status.name }} <span class="badge bg-light text-dark">{{ status.task_count }}</span></div>
+                    {% endif %}
 
                     {% for task in status.filtered_tasks %}
                     <div class="task-card priority-{{ task.priority }}"
                          draggable="true"
                          data-task-id="{{ task.id }}"
                          ondragstart="handleDragStart(event)">
-                        <strong><a href="{% url 'task-detail' task.id %}" style="color: inherit; text-decoration: none;">{{ task.title }}</a></strong>
-                        <br>
-                        <small class="text-muted">
-                            🗓 {{ task.planned_end_date|date:"d.m.Y" }}
-                        </small>
+                        <a href="{% url 'task-detail' task.id %}" class="task-title">{{ task.title }}</a>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small class="text-muted">🗓 {{ task.planned_end_date|date:"d.m.Y" }}</small>
+                            <span class="badge-priority badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                        </div>
+                        <small class="text-muted">📁 {{ task.project.name }}</small>
                     </div>
                     {% empty %}
-                    <p class="text-muted text-center">Нет задач</p>
+                    <p class="text-muted text-center mt-3">Нет задач</p>
                     {% endfor %}
                 </div>
             </div>
@@ -85,25 +159,32 @@
         function handleDrop(e) {
             e.preventDefault();
             e.currentTarget.classList.remove('drag-over');
+
             const taskId = e.dataTransfer.getData('text/plain');
             const card = document.querySelector(`[data-task-id="${taskId}"]`);
-            const statusId = e.currentTarget.dataset.statusId;
+            const newStatusId = e.currentTarget.dataset.statusId;
+
+            // Не даём карточке переместиться до ответа сервера
+            e.currentTarget.appendChild(card);
+
             fetch(`/tasks/task/${taskId}/update-status/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}',
                 },
-                body: JSON.stringify({ status_id: statusId })
+                body: JSON.stringify({ status_id: newStatusId })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Успех — оставляем карточку и перезагружаем
                     card.classList.remove('dragging');
                     location.reload();
                 } else {
+                    // Ошибка — показываем сообщение и перезагружаем (карточка вернётся на место)
                     alert('❌ ' + data.error);
-                    card.classList.remove('dragging');
+                    location.reload();
                 }
             });
         }

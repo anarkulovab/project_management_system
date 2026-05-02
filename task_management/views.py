@@ -8,19 +8,37 @@ import json
 
 @login_required
 def kanban_board(request):
+    from resource_planning.models import Project
+
     statuses = TaskStatus.objects.all().order_by('order')
+
+    # Получаем задачи текущего пользователя
+    tasks = Task.objects.filter(assigned_to=request.user).select_related('project', 'status')
+
+    # ФИЛЬТРЫ
+    project_id = request.GET.get('project')
+    priority = request.GET.get('priority')
+
+    if project_id:
+        tasks = tasks.filter(project_id=project_id)
+    if priority:
+        tasks = tasks.filter(priority=priority)
 
     # Добавляем отфильтрованные задачи к каждому статусу
     for status in statuses:
-        status.filtered_tasks = status.task_set.filter(assigned_to=request.user)
+        status.filtered_tasks = tasks.filter(status=status)
         status.task_count = status.filtered_tasks.count()
+
+    # Все доступные проекты для фильтра
+    projects = Project.objects.all()
 
     context = {
         'statuses': statuses,
+        'projects': projects,
+        'selected_project': project_id,
+        'selected_priority': priority,
     }
     return render(request, 'task_management/kanban_board.html', context)
-
-
 @csrf_exempt
 @login_required
 def update_task_status(request, task_id):
@@ -33,18 +51,20 @@ def update_task_status(request, task_id):
         data = json.loads(request.body)
         new_status_id = data.get('status_id')
 
-        old_status_name = task.status.name.strip()
+        old_status_name = str(task.status.name).strip().lower()
         new_status = get_object_or_404(TaskStatus, id=new_status_id)
-        new_status_name = new_status.name.strip()
+        new_status_name = str(new_status.name).strip().lower()
 
-        # Проверка: нельзя из "В работе" сразу в "Готово"
-        if old_status_name == 'В работе' and new_status_name == 'Готово':
+
+
+        # Проверка
+        if old_status_name == 'в работе' and new_status_name == 'готово':
             return JsonResponse({
                 'success': False,
-                'error': 'Задача должна пройти проверку руководителем. Сначала переведите в "На проверке".'
+                'error': 'Задача должна пройти проверку руководителем!'
             })
 
-        # Записываем в историю
+        # Запись в историю
         from .models import TaskHistory
         TaskHistory.objects.create(
             task=task,
@@ -59,8 +79,7 @@ def update_task_status(request, task_id):
 
         return JsonResponse({'success': True})
 
-    return JsonResponse({'success': False, 'error': 'Неверный метод запроса'})
-
+    return JsonResponse({'success': False, 'error': 'Неверный метод'})
 
 @login_required
 def task_detail(request, task_id):
