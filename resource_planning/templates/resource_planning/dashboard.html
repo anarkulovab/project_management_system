@@ -2,11 +2,349 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Календарно-ресурсное планирование</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд руководителя</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-deep: #0A0F14;
+            --bg-surface: #141B22;
+            --primary-base: #2C3E50;
+            --accent-core: #3498DB;
+            --role-leader: #3498DB;
+            --success: #27AE60;
+            --warning: #F39C12;
+            --danger: #E74C3C;
+            --info: #1ABC9C;
+            --text-primary: #FFFFFF;
+            --text-main: #E0E4E8;
+            --text-secondary: #9AA4B0;
+            --text-muted: #7F8C8D;
+            --border-light: #25323E;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-deep);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 2rem;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+
+        /* KPI карточки */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: 1.2rem;
+            padding: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .kpi-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .kpi-accent { color: var(--accent-core); }
+        .kpi-success { color: var(--success); }
+        .kpi-warning { color: var(--warning); }
+        .kpi-danger { color: var(--danger); }
+
+        /* Графики */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: 1.2rem;
+            padding: 1.5rem;
+        }
+
+        .chart-card h3 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        canvas { max-height: 300px; }
+
+        /* Таблица */
+        .table-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: 1.2rem;
+            padding: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .table-card h3 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            text-align: left;
+            color: var(--text-secondary);
+            font-weight: 500;
+            padding: 0.75rem 0.5rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        td {
+            padding: 0.75rem 0.5rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-active { background: #3498DB20; color: #3498DB; }
+        .badge-completed { background: #27AE6020; color: #27AE60; }
+        .badge-paused { background: #F39C1220; color: #F39C12; }
+        .badge-cancelled { background: #E74C3C20; color: #E74C3C; }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--border-light);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 10px;
+            background: var(--accent-core);
+            transition: width 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            body { padding: 1rem; }
+        }
+    </style>
 </head>
 <body>
-    <h1>Панель управления проектами</h1>
-    <p>Добро пожаловать, руководитель проекта!</p>
-    <p>Здесь будут отображаться проекты, диаграмма Ганта и загрузка команды.</p>
+<div class="container">
+    <h1>📊 Панель руководителя</h1>
+    <p class="subtitle">Обзор проектов · KPI · Загрузка команды</p>
+
+    <!-- KPI карточки -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Всего проектов</div>
+            <div class="kpi-value kpi-accent">{{ total_projects }}</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">
+                🟢 {{ active_projects }} активно · ✅ {{ completed_projects }} завершено
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Просроченные задачи</div>
+            <div class="kpi-value {% if overdue_tasks > 0 %}kpi-danger{% else %}kpi-success{% endif %}">
+                {{ overdue_tasks }}
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">
+                {% if overdue_tasks == 0 %}✅ Всё в срок{% else %}🔴 Требуют внимания{% endif %}
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Средняя загрузка команды</div>
+            <div class="kpi-value {% if avg_utilization > 90 %}kpi-danger{% elif avg_utilization > 70 %}kpi-warning{% else %}kpi-success{% endif %}">
+                {{ avg_utilization }}%
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">
+                Факт / План часов
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">KPI выполнения</div>
+            <div class="kpi-value kpi-accent">
+                {{ project_progress|length }}
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">
+                Проектов с KPI
+            </div>
+        </div>
+    </div>
+
+    <!-- Графики -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h3>📈 Прогресс проектов (%)</h3>
+            <canvas id="progressChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>📋 Задачи по статусам</h3>
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Таблица проектов -->
+    <div class="table-card">
+        <h3>🗂️ Проекты</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Статус</th>
+                    <th>Прогресс</th>
+                    <th>Дедлайн</th>
+                    <th>Руководитель</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in project_list %}
+                <tr>
+                    <td>{{ project.name }}</td>
+                    <td>
+                        {% if project.status.name == 'Активен' %}
+                            <span class="badge badge-active">{{ project.status.name }}</span>
+                        {% elif project.status.name == 'Завершён' %}
+                            <span class="badge badge-completed">{{ project.status.name }}</span>
+                        {% elif project.status.name == 'Приостановлен' %}
+                            <span class="badge badge-paused">{{ project.status.name }}</span>
+                        {% else %}
+                            <span class="badge badge-cancelled">{{ project.status.name }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div class="progress-bar" style="flex: 1;">
+                                <div class="progress-fill" style="width: {% for kpi in kpi_list %}{% if kpi.project_id == project.id and kpi.name == 'Процент выполнения' %}{{ kpi.value|floatformat:0 }}{% endif %}{% endfor %}%;"></div>
+                            </div>
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);">
+                                {% for kpi in kpi_list %}
+                                    {% if kpi.project_id == project.id and kpi.name == 'Процент выполнения' %}
+                                        {{ kpi.value|floatformat:0 }}%
+                                    {% endif %}
+                                {% endfor %}
+                            </span>
+                        </div>
+                    </td>
+                    <td>{{ project.end_date_plan|date:"d.m.Y" }}</td>
+                    <td>
+                        {% if project.manager %}
+                        {{ project.manager.first_name|default:project.manager.username }}
+                        {% else %}
+                        <span style="color: var(--text-muted);">Не назначен</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted);">Нет проектов</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // График: Прогресс проектов
+    const ctx1 = document.getElementById('progressChart').getContext('2d');
+    new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: {{ project_names|safe }},
+            datasets: [{
+                label: 'Выполнение (%)',
+                data: {{ project_progress|safe }},
+                backgroundColor: ['#3498DB', '#27AE60', '#F39C12', '#E74C3C', '#1ABC9C'],
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, max: 100, ticks: { color: '#9AA4B0' }, grid: { color: '#2C3E5020' } },
+                x: { ticks: { color: '#9AA4B0', maxRotation: 30 }, grid: { display: false } }
+            }
+        }
+    });
+
+    // График: Статусы задач
+    const ctx2 = document.getElementById('statusChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: {{ status_labels|safe }},
+            datasets: [{
+                data: {{ status_counts|safe }},
+                backgroundColor: ['#3498DB', '#F39C12', '#27AE60', '#E74C3C', '#1ABC9C'],
+                borderColor: '#141B22',
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#9AA4B0', padding: 15 }
+                }
+            }
+        }
+    });
+</script>
 </body>
 </html>
