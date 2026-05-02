@@ -55,7 +55,7 @@
                          draggable="true"
                          data-task-id="{{ task.id }}"
                          ondragstart="handleDragStart(event)">
-                        <strong>{{ task.title }}</strong>
+                        <strong><a href="{% url 'task-detail' task.id %}" style="color: inherit; text-decoration: none;">{{ task.title }}</a></strong>
                         <br>
                         <small class="text-muted">
                             🗓 {{ task.planned_end_date|date:"d.m.Y" }}

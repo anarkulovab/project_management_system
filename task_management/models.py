@@ -36,8 +36,12 @@ class Task(models.Model):
     planned_end_date = models.DateTimeField(verbose_name="Плановый срок")
 
     # Связь с проектом пока закомментирована — ждём модель от Бегимай
-    # project = models.ForeignKey('resource_planning.Project', on_delete=models.CASCADE, related_name='tasks', verbose_name="Проект")
-
+    project = models.ForeignKey(
+        'resource_planning.Project',
+        on_delete=models.CASCADE,
+        related_name='tasks',
+        verbose_name="Проект"
+    )
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='assigned_tasks', verbose_name="Исполнитель")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='authored_tasks',
