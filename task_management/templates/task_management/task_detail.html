@@ -10,8 +10,8 @@
             --bg-deep: #0A0F14;
             --bg-surface: #141B22;
             --primary-base: #2C3E50;
-            --accent-core: #3498DB;
             --role-member: #9B59B6;
+            --accent-core: #3498DB;
             --success: #27AE60;
             --warning: #F39C12;
             --danger: #E74C3C;
@@ -125,21 +125,56 @@
         hr {
             border-color: #2a3a4a;
         }
+
+        .subtask-item {
+            margin-left: 20px;
+            margin-bottom: 5px;
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+        }
+        .subtask-link {
+            color: var(--role-member);
+            text-decoration: none;
+            margin-left: 8px;
+        }
+        .subtask-link:hover {
+            text-decoration: underline;
+        }
+                .btn-outline-light {
+            border-color: #2a3a4a;
+            color: var(--text-secondary);
+        }
+        .btn-outline-light:hover {
+            background: var(--role-member);
+            border-color: var(--role-member);
+            color: white;
+        }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-dark mb-4">
-        <div class="container">
-            <span class="navbar-brand">📋 Управление проектами</span>
-            <span class="navbar-text user-badge">👤 {{ user.username }}</span>
+    <div class="container">
+        <span class="navbar-brand">📋 Управление проектами</span>
+        <div>
+            <a href="{% url 'notifications' %}" class="btn btn-outline-light btn-sm me-2 position-relative">
+                🔔
+                {% if unread_count > 0 %}
+                    <span style="background: var(--danger); color: white; border-radius: 50%; padding: 1px 6px; font-size: 0.7rem; position: absolute; top: -5px; right: -5px;">{{ unread_count }}</span>
+                {% endif %}
+            </a>
+            <a href="{% url 'kanban-board' %}" class="btn btn-outline-light btn-sm me-2">Доска</a>
+            <a href="{% url 'project-list' %}" class="btn btn-outline-light btn-sm me-2">Проекты</a>
+            <a href="{% url 'personal-dashboard' %}" class="btn btn-outline-light btn-sm me-2">Кабинет</a>
+            <span class="navbar-text user-badge">{{ user.username }}</span>
         </div>
-    </nav>
+    </div>
+</nav>
 
     <div class="container">
         <a href="javascript:history.back()" class="btn btn-back mb-3">← Назад</a>
 
         <div class="row">
-            <!-- Основная информация -->
             <div class="col-md-8">
                 <div class="card mb-4">
                     <div class="card-body">
@@ -168,7 +203,7 @@
                                 <p class="priority-{{ task.priority }}">
                                     <strong>Приоритет:</strong> {{ task.get_priority_display }}
                                 </p>
-                                <p><strong>Проект:</strong> <span style="color: var(--accent-core);">{{ task.project.name }}</span></p>
+                                <p><strong>Проект:</strong> <a href="{% url 'project-detail' task.project.id %}" style="color: var(--accent-core); text-decoration: none;">{{ task.project.name }}</a></p>
                             </div>
                             <div class="col-6">
                                 <p><strong>Исполнитель:</strong> <span style="color: var(--role-member);">{{ task.assigned_to }}</span></p>
@@ -182,9 +217,54 @@
                                 </p>
                             </div>
                         </div>
+
+                        <!-- Подзадачи -->
+                        <hr style="border-color: #2a3a4a;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong style="color: var(--text-muted);">📎 Подзадачи</strong>
+                            <a href="{% url 'create-subtask' task.id %}" class="btn btn-sm" style="background: var(--role-member); color: white;">➕ Подзадача</a>
+                        </div>
+                        {% if task.subtasks.all %}
+                            {% for subtask in task.subtasks.all %}
+                                <div class="subtask-item">
+                                    {% if subtask.status.name == 'Готово' %}
+                                        <span style="color: var(--success);">✅</span>
+                                        <span class="text-decoration-line-through" style="color: var(--text-muted); margin-left: 8px;">
+                                            {{ subtask.title }}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--text-muted);">⬜</span>
+                                        <a href="{% url 'task-detail' subtask.id %}" class="subtask-link">
+                                            {{ subtask.title }}
+                                        </a>
+                                    {% endif %}
+                                    <span class="badge-status
+                                        {% if subtask.status.name == 'Новая' %}status-new
+                                        {% elif subtask.status.name == 'В работе' %}status-work
+                                        {% elif subtask.status.name == 'На проверке' %}status-review
+                                        {% elif subtask.status.name == 'Готово' %}status-done
+                                        {% else %}status-blocked{% endif %}"
+                                        style="font-size: 0.6rem; padding: 2px 6px; margin-left: 8px;">
+                                        {{ subtask.status.name }}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted-custom">Нет подзадач</p>
+                        {% endif %}
                     </div>
                 </div>
-
+                {% with pending_request=task.change_requests.all %}
+    {% if pending_request %}
+        <button class="btn btn-sm mt-2" style="border: 1px solid var(--text-muted); color: var(--text-muted);" disabled>
+            ⏳ Ожидает решения
+        </button>
+    {% else %}
+        <a href="{% url 'request-change' task.id %}" class="btn btn-sm mt-2" style="border: 1px solid var(--warning); color: var(--warning);">
+            🔄 Передать задачу
+        </a>
+    {% endif %}
+{% endwith %}
                 <!-- Комментарии -->
                 <div class="card mb-4">
                     <div class="card-header">💬 Комментарии</div>

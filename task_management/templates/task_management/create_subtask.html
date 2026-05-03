@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создать подзадачу</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0A0F14; --bg-surface: #141B22; --primary-base: #2C3E50;
+            --role-member: #9B59B6; --text-primary: #FFFFFF; --text-main: #E0E4E8;
+            --text-secondary: #9AA4B0; --text-muted: #7F8C8D;
+        }
+        body { background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
+        .navbar { background: var(--primary-base) !important; border-bottom: 2px solid var(--role-member); }
+        .card { background: var(--bg-surface); border: 1px solid #2a3a4a; border-radius: 10px; }
+        .card-header { background: var(--primary-base); border-bottom: 1px solid #2a3a4a; color: var(--text-primary); font-weight: 600; }
+        .form-control, .form-select { background: var(--bg-deep); border: 1px solid #2a3a4a; color: var(--text-main); }
+        .form-control:focus { border-color: var(--role-member); box-shadow: 0 0 0 0.2rem rgba(155, 89, 182, 0.25); }
+        .btn-primary { background: var(--role-member); border-color: var(--role-member); }
+        .btn-primary:hover { background: #8e44ad; }
+        .btn-back { border: 1px solid #2a3a4a; color: var(--text-secondary); }
+        .btn-back:hover { background: var(--role-member); color: white; }
+                .btn-outline-light {
+            border-color: #2a3a4a;
+            color: var(--text-secondary);
+        }
+        .btn-outline-light:hover {
+            background: var(--role-member);
+            border-color: var(--role-member);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark mb-4">
+    <div class="container">
+        <span class="navbar-brand">📋 Управление проектами</span>
+        <div>
+            <a href="{% url 'notifications' %}" class="btn btn-outline-light btn-sm me-2 position-relative">
+                🔔
+                {% if unread_count > 0 %}
+                    <span style="background: var(--danger); color: white; border-radius: 50%; padding: 1px 6px; font-size: 0.7rem; position: absolute; top: -5px; right: -5px;">{{ unread_count }}</span>
+                {% endif %}
+            </a>
+            <a href="{% url 'kanban-board' %}" class="btn btn-outline-light btn-sm me-2">Доска</a>
+            <a href="{% url 'project-list' %}" class="btn btn-outline-light btn-sm me-2">Проекты</a>
+            <a href="{% url 'personal-dashboard' %}" class="btn btn-outline-light btn-sm me-2">Кабинет</a>
+            <span class="navbar-text user-badge">{{ user.username }}</span>
+        </div>
+    </div>
+</nav>
+    <div class="container">
+        <a href="{% url 'task-detail' parent_task.id %}" class="btn btn-back mb-3">← Назад к задаче</a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">➕ Создать подзадачу</div>
+                    <div class="card-body">
+                        <p style="color: var(--text-muted);">К задаче: <strong>{{ parent_task.title }}</strong></p>
+                        <hr style="border-color: #2a3a4a;">
+
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label" style="color: var(--text-secondary);">Название подзадачи</label>
+                                <input type="text" name="title" class="form-control" required placeholder="Что нужно сделать?">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Создать</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

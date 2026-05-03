@@ -42,6 +42,14 @@ class Task(models.Model):
         related_name='tasks',
         verbose_name="Проект"
     )
+    parent_task = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='subtasks',
+        verbose_name="Родительская задача"
+    )
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='assigned_tasks', verbose_name="Исполнитель")
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='authored_tasks',
@@ -96,3 +104,25 @@ class TaskHistory(models.Model):
 
     def __str__(self):
         return f"{self.changed_at}: {self.user} изменил {self.changed_field} у {self.task}"
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE)
+    message = models.CharField(max_length=500)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class ExecutorChangeRequest(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='change_requests')
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_requests')
+    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_requests')
+    reason = models.TextField(blank=True)
+    is_approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']

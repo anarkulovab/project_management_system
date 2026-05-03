@@ -5,6 +5,10 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from .models import Task, TaskStatus
 import json
+from .models import Task, TaskStatus, Comment, TaskHistory, Notification
+from .models import Task, TaskStatus, Comment, TaskHistory, Notification, ExecutorChangeRequest
+from django.contrib import messages
+
 
 
 @login_required
@@ -13,8 +17,11 @@ def kanban_board(request):
 
     statuses = TaskStatus.objects.all().order_by('order')
 
-    # Получаем задачи текущего пользователя
-    tasks = Task.objects.filter(assigned_to=request.user).select_related('project', 'status')
+    # Получаем задачи текущего пользователя (только родительские, не подзадачи)
+    tasks = Task.objects.filter(
+        assigned_to=request.user,
+        parent_task__isnull=True  # только основные задачи
+    ).select_related('project', 'status').prefetch_related('subtasks')
 
     # ФИЛЬТРЫ
     project_id = request.GET.get('project')
@@ -30,7 +37,6 @@ def kanban_board(request):
         status.filtered_tasks = tasks.filter(status=status)
         status.task_count = status.filtered_tasks.count()
 
-    # Все доступные проекты для фильтра
     projects = Project.objects.all()
 
     context = {
@@ -40,6 +46,8 @@ def kanban_board(request):
         'selected_priority': priority,
     }
     return render(request, 'task_management/kanban_board.html', context)
+
+
 @csrf_exempt
 @login_required
 def update_task_status(request, task_id):
@@ -56,7 +64,48 @@ def update_task_status(request, task_id):
         new_status = get_object_or_404(TaskStatus, id=new_status_id)
         new_status_name = str(new_status.name).strip().lower()
 
-        # Правила переходов
+        is_manager = request.user.groups.filter(name='Руководитель проекта').exists()
+        is_subtask = task.parent_task is not None
+
+        # Для подзадач разрешаем любые переходы
+        if is_subtask:
+            task.status = new_status
+            task.save()
+
+            from .models import TaskHistory
+            TaskHistory.objects.create(
+                task=task,
+                user=request.user,
+                changed_field='status',
+                old_value=old_status_name,
+                new_value=new_status_name,
+            )
+            return JsonResponse({'success': True})
+
+        # Нельзя отправить на проверку, если есть незавершённые подзадачи
+        if new_status_name == 'на проверке' and not is_subtask:
+            unfinished_subtasks = task.subtasks.exclude(status__name='Готово').exists()
+            if unfinished_subtasks:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Нельзя отправить задачу на проверку, пока не выполнены все подзадачи.'
+                })
+
+        # Переходы, доступные только руководителю
+        manager_only_transitions = [
+            ('на проверке', 'готово'),
+            ('на проверке', 'в работе'),
+            ('готово', 'в работе'),
+        ]
+
+        if (old_status_name, new_status_name) in manager_only_transitions:
+            if not is_manager:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Только руководитель может выполнить это действие.'
+                })
+
+        # Полностью запрещённые переходы
         forbidden_transitions = [
             ('новая', 'на проверке'),
             ('новая', 'готово'),
@@ -66,16 +115,16 @@ def update_task_status(request, task_id):
         ]
 
         if (old_status_name, new_status_name) in forbidden_transitions:
-            messages = {
+            messages_dict = {
                 ('новая', 'на проверке'): 'Нельзя отправить на проверку, не начав работу.',
                 ('новая', 'готово'): 'Задача должна быть выполнена перед завершением.',
-                ('в работе', 'готово'): 'Задача должна пройти проверку руководителем. Сначала переведите в "На проверке".',
+                ('в работе', 'готово'): 'Задача должна пройти проверку руководителем.',
                 ('в работе', 'новая'): 'Нельзя вернуть задачу в статус "Новая".',
-                ('на проверке', 'новая'): 'Нельзя сбросить задачу до "Новой", верните в работу.',
+                ('на проверке', 'новая'): 'Нельзя сбросить задачу до "Новой".',
             }
             return JsonResponse({
                 'success': False,
-                'error': messages.get((old_status_name, new_status_name), 'Этот переход запрещён.')
+                'error': messages_dict.get((old_status_name, new_status_name), 'Этот переход запрещён.')
             })
 
         # Запись в историю
@@ -91,6 +140,41 @@ def update_task_status(request, task_id):
         task.status = new_status
         task.save()
 
+        # Оповещения
+        from .models import Notification
+
+        if new_status_name == 'на проверке' and not is_subtask:
+            if task.project.manager:
+                Notification.objects.create(
+                    user=task.project.manager,
+                    task=task,
+                    message=f'Исполнитель {request.user} перевёл задачу "{task.title}" в статус "На проверке".'
+                )
+
+        elif new_status_name == 'готово' and old_status_name == 'на проверке':
+            if task.assigned_to:
+                Notification.objects.create(
+                    user=task.assigned_to,
+                    task=task,
+                    message=f'Руководитель принял задачу "{task.title}". Статус: Готово ✅'
+                )
+
+        elif new_status_name == 'в работе' and old_status_name == 'на проверке':
+            if task.assigned_to:
+                Notification.objects.create(
+                    user=task.assigned_to,
+                    task=task,
+                    message=f'Руководитель отклонил задачу "{task.title}". Требуется доработка.'
+                )
+
+        elif new_status_name == 'в работе' and old_status_name == 'готово':
+            if task.assigned_to:
+                Notification.objects.create(
+                    user=task.assigned_to,
+                    task=task,
+                    message=f'Руководитель переоткрыл задачу "{task.title}".'
+                )
+
         return JsonResponse({'success': True})
 
     return JsonResponse({'success': False, 'error': 'Неверный метод'})
@@ -99,9 +183,15 @@ def task_detail(request, task_id):
     task = get_object_or_404(Task, id=task_id)
 
     # Проверка доступа: только исполнитель или автор
-    if request.user != task.assigned_to and request.user != task.author:
-        from django.http import HttpResponseForbidden
-        return HttpResponseForbidden("У вас нет доступа к этой задаче")
+    is_manager = request.user.groups.filter(name='Руководитель проекта').exists()
+    is_admin = request.user.is_staff
+
+    if not is_manager and not is_admin:
+        if request.user != task.assigned_to and request.user != task.author:
+            return render(request, 'task_management/access_denied.html', {
+                'task': task,
+                'message': 'У вас нет доступа к этой задаче.'
+            }, status=403)
 
     # Комментарии
     comments = task.comments.all().order_by('created_at')
@@ -189,6 +279,58 @@ def create_task(request):
     return render(request, 'task_management/create_task.html', context)
 
 
+@login_required
+def request_executor_change(request, task_id):
+    task = get_object_or_404(Task, id=task_id, assigned_to=request.user)
+
+    if request.method == 'POST':
+        to_user_id = request.POST.get('to_user')
+        reason = request.POST.get('reason', '')
+
+        to_user = get_object_or_404(User, id=to_user_id)
+
+        req = ExecutorChangeRequest.objects.create(
+            task=task,
+            from_user=request.user,
+            to_user=to_user,
+            reason=reason,
+        )
+        # Оповещение себе
+        Notification.objects.create(
+            user=request.user,
+            task=task,
+            message=f'Вы запросили передачу задачи "{task.title}" сотруднику {to_user}. Ожидайте решения руководителя.'
+        )
+
+        # Запись в историю
+        TaskHistory.objects.create(
+            task=task,
+            user=request.user,
+            changed_field='executor_change_request',
+            old_value=str(request.user),
+            new_value=f'Запрос на {to_user}',
+        )
+
+        # Оповещение руководителю
+        if task.project.manager:
+            Notification.objects.create(
+                user=task.project.manager,
+                task=task,
+                message=f'🔄 {request.user} просит передать задачу "{task.title}" сотруднику {to_user}.'
+            )
+
+        messages.success(request, '✅ Запрос на смену исполнителя отправлен руководителю.')
+        return redirect('task-detail', task_id=task.id)
+
+    # GET — показать форму
+    project_participants = task.project.participants.exclude(id=request.user.id)
+
+    context = {
+        'task': task,
+        'participants': project_participants,
+    }
+    return render(request, 'task_management/request_change.html', context)
+
 from django.utils import timezone
 
 
@@ -197,14 +339,16 @@ def personal_dashboard(request):
     user = request.user
     statuses = TaskStatus.objects.all().order_by('order')
 
-    # Все задачи пользователя
-    user_tasks = Task.objects.filter(assigned_to=user).select_related('project', 'status')
+    # Только основные задачи (без подзадач)
+    user_tasks = Task.objects.filter(
+        assigned_to=user,
+        parent_task__isnull=True
+    ).select_related('project', 'status')
 
     # Статистика по статусам
     for status in statuses:
         status.task_count = user_tasks.filter(status=status).count()
 
-    # Общее количество
     total_tasks = user_tasks.count()
 
     # Просроченные
@@ -227,3 +371,126 @@ def personal_dashboard(request):
         'completed_tasks': completed_tasks,
     }
     return render(request, 'task_management/personal_dashboard.html', context)
+
+@login_required
+def project_detail(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+
+    # Проверка доступа
+    is_manager = request.user.groups.filter(name='Руководитель проекта').exists()
+    is_participant = project.participants.filter(id=request.user.id).exists()
+    is_admin = request.user.is_staff
+
+    if not is_manager and not is_admin and not is_participant:
+        return render(request, 'task_management/access_denied.html', {
+            'task': project,
+            'message': 'У вас нет доступа к этому проекту. Вы не являетесь участником.'
+        }, status=403)
+
+    statuses = TaskStatus.objects.all().order_by('order')
+
+    # Все задачи проекта
+    project_tasks = Task.objects.filter(project=project, parent_task__isnull=True).select_related('assigned_to', 'status')
+
+    # Группируем по статусам
+    for status in statuses:
+        status.filtered_tasks = project_tasks.filter(status=status)
+        status.task_count = status.filtered_tasks.filter(parent_task__isnull=True).count()
+
+    context = {
+        'project': project,
+        'statuses': statuses,
+        'total_tasks': project_tasks.count(),
+    }
+    return render(request, 'task_management/project_detail.html', context)
+
+
+@login_required
+def project_list(request):
+    user = request.user
+    # Ищем в группах, а не через is_staff
+    is_manager = user.groups.filter(name='Руководитель проекта').exists()
+
+    if is_manager:
+        projects = Project.objects.filter(manager=user).order_by('-created_at')
+    else:
+        projects = Project.objects.filter(participants=user).order_by('-created_at')
+
+    for project in projects:
+        project.task_count = Task.objects.filter(project=project, parent_task__isnull=True).count()
+        project.done_count = Task.objects.filter(project=project, status__name='Готово').count()
+
+    context = {
+        'projects': projects,
+        'is_manager': is_manager,
+    }
+    return render(request, 'task_management/project_list.html', context)
+
+
+@login_required
+def create_subtask(request, parent_task_id):
+    parent_task = get_object_or_404(Task, id=parent_task_id)
+
+    # Только исполнитель или автор может создать подзадачу
+    if request.user != parent_task.assigned_to and request.user != parent_task.author:
+        return render(request, 'task_management/access_denied.html', {
+            'task': parent_task,
+            'message': 'Вы не можете создавать подзадачи к этой задаче.'
+        }, status=403)
+
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+
+        if title:
+            Task.objects.create(
+                title=title,
+                description=description or '',
+                priority='low',
+                planned_end_date=parent_task.planned_end_date,
+                project=parent_task.project,
+                assigned_to=request.user,
+                author=request.user,
+                status=TaskStatus.objects.get(name='Новая'),
+                parent_task=parent_task,
+            )
+            from django.contrib import messages
+            messages.success(request, f'✅ Подзадача "{title}" создана!')
+            return redirect('task-detail', task_id=parent_task.id)
+
+    context = {
+        'parent_task': parent_task,
+    }
+    return render(request, 'task_management/create_subtask.html', context)
+
+
+@login_required
+def notifications_list(request):
+    notifications = Notification.objects.filter(user=request.user, is_read=False)
+    return render(request, 'task_management/notifications.html', {'notifications': notifications})
+
+
+@login_required
+def notifications_list(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    unread_count = notifications.filter(is_read=False).count()
+
+    context = {
+        'notifications': notifications,
+        'unread_count': unread_count,
+    }
+    return render(request, 'task_management/notifications.html', context)
+
+
+@login_required
+def mark_notification_read(request, notification_id):
+    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notification.is_read = True
+    notification.save()
+    return redirect('notifications')
+
+
+@login_required
+def mark_all_read(request):
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return redirect('notifications')

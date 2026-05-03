@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ project.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0A0F14; --bg-surface: #141B22; --primary-base: #2C3E50;
+            --role-member: #9B59B6; --accent-core: #3498DB; --success: #27AE60;
+            --text-primary: #FFFFFF; --text-main: #E0E4E8; --text-secondary: #9AA4B0; --text-muted: #7F8C8D;
+        }
+        body { background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
+        .navbar { background: var(--primary-base) !important; border-bottom: 2px solid var(--role-member); }
+        .user-badge { color: var(--role-member); font-weight: 600; }
+        .page-title { color: var(--text-primary); border-left: 4px solid var(--accent-core); padding-left: 15px; }
+        .btn-back { border: 1px solid #2a3a4a; color: var(--text-secondary); text-decoration: none; padding: 8px 16px; border-radius: 6px; display: inline-block; }
+        .btn-back:hover { background: var(--role-member); border-color: var(--role-member); color: white; }
+
+        .card { background: var(--bg-surface); border: 1px solid #2a3a4a; border-radius: 10px; margin-bottom: 20px; }
+        .card-header { background: var(--primary-base); border-bottom: 1px solid #2a3a4a; color: var(--text-primary); font-weight: 600; padding: 15px 20px; }
+        .card-body { padding: 20px; }
+
+        .info-row { display: flex; margin-bottom: 12px; }
+        .info-label { color: var(--text-muted); width: 180px; }
+        .info-value { color: var(--text-main); }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .status-active { background: rgba(39,174,96,0.2); color: var(--success); }
+        .status-paused { background: rgba(243,156,18,0.2); color: #F39C12; }
+        .status-completed { background: rgba(52,152,219,0.2); color: var(--accent-core); }
+        .status-cancelled { background: rgba(231,76,60,0.2); color: #E74C3C; }
+                .btn-outline-light {
+            border-color: #2a3a4a;
+            color: var(--text-secondary);
+        }
+        .btn-outline-light:hover {
+            background: var(--role-member);
+            border-color: var(--role-member);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark mb-4">
+    <div class="container">
+        <span class="navbar-brand">📋 Управление проектами</span>
+        <div>
+            <a href="{% url 'notifications' %}" class="btn btn-outline-light btn-sm me-2 position-relative">
+                🔔
+                {% if unread_count > 0 %}
+                    <span style="background: var(--danger); color: white; border-radius: 50%; padding: 1px 6px; font-size: 0.7rem; position: absolute; top: -5px; right: -5px;">{{ unread_count }}</span>
+                {% endif %}
+            </a>
+            <a href="{% url 'kanban-board' %}" class="btn btn-outline-light btn-sm me-2">Доска</a>
+            <a href="{% url 'project-list' %}" class="btn btn-outline-light btn-sm me-2">Проекты</a>
+            <a href="{% url 'personal-dashboard' %}" class="btn btn-outline-light btn-sm me-2">Кабинет</a>
+            <span class="navbar-text user-badge">{{ user.username }}</span>
+        </div>
+    </div>
+</nav>
+
+    <div class="container">
+        <a href="{% url 'project-list' %}" class="btn btn-back mb-3">← К списку проектов</a>
+
+        <h2 class="page-title mb-4">{{ project.name }}</h2>
+
+        <div class="card">
+            <div class="card-header">📋 Информация о проекте</div>
+            <div class="card-body">
+                <div class="info-row">
+                    <span class="info-label">Описание</span>
+                    <span class="info-value">{{ project.description|default:"Не указано" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Статус</span>
+                    <span class="info-value">
+                        {% with status_name=project.status.name %}
+                            <span class="status-badge
+                                {% if status_name == 'Активен' %}status-active
+                                {% elif status_name == 'Приостановлен' %}status-paused
+                                {% elif status_name == 'Завершён' %}status-completed
+                                {% else %}status-cancelled{% endif %}">
+                                {{ status_name }}
+                            </span>
+                        {% endwith %}
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Приоритет</span>
+                    <span class="info-value">{{ project.priority.name|default:"Не указан" }}</span>
+                </div>
+                <div class="info-row">
+    <span class="info-label">Руководитель</span>
+    <span class="info-value">
+        {% if project.manager %}
+            {{ project.manager.get_full_name|default:project.manager.username }}
+        {% else %}
+            Не назначен
+        {% endif %}
+    </span>
+</div>
+                <div class="info-row">
+                    <span class="info-label">Плановая дата начала</span>
+                    <span class="info-value">{{ project.start_date_plan|date:"d.m.Y"|default:"Не указана" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Плановая дата окончания</span>
+                    <span class="info-value">{{ project.end_date_plan|date:"d.m.Y"|default:"Не указана" }}</span>
+                </div>
+                {% if project.end_date_fact %}
+                <div class="info-row">
+                    <span class="info-label">Фактическая дата окончания</span>
+                    <span class="info-value">{{ project.end_date_fact|date:"d.m.Y" }}</span>
+                </div>
+                {% endif %}
+                <div class="info-row">
+                    <span class="info-label">Всего задач</span>
+                    <span class="info-value">{{ total_tasks }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

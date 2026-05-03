@@ -103,8 +103,15 @@
         <div class="container">
             <span class="navbar-brand">📋 Управление проектами</span>
             <div>
-                <a href="{% url 'kanban-board' %}" class="btn btn-outline-light btn-sm me-2">📋 Доска</a>
-                <span class="navbar-text user-badge">👤 {{ user.username }}</span>
+                <a href="{% url 'notifications' %}" class="btn btn-outline-light btn-sm me-2 position-relative">
+                🔔
+                {% if unread_count > 0 %}
+                    <span style="background: var(--danger); color: white; border-radius: 50%; padding: 1px 6px; font-size: 0.7rem; position: absolute; top: -5px; right: -5px;">{{ unread_count }}</span>
+                {% endif %}
+            </a>
+                <a href="{% url 'kanban-board' %}" class="btn btn-outline-light btn-sm me-2">Доска</a>
+<a href="{% url 'project-list' %}" class="btn btn-outline-light btn-sm me-2">Проекты</a>
+<a href="{% url 'personal-dashboard' %}" class="btn btn-outline-light btn-sm me-2">Кабинет</a>
             </div>
         </div>
     </nav>
@@ -155,6 +162,9 @@
         <div class="row align-items-center">
             <div class="col-md-5">
                 <canvas id="taskChart" width="200" height="200"></canvas>
+                <small style="color: var(--text-muted); display: block; text-align: center; margin-top: 5px;">
+    Все задачи за всё время
+</small>
             </div>
             <div class="col-md-7">
                 <div class="d-flex justify-content-between mb-2">
@@ -194,9 +204,12 @@
                 <div class="alert-overdue p-3 mb-4">
                     <strong>⚠️ Просроченные задачи:</strong>
                     {% for task in overdue_tasks %}
-                        <div class="mt-2">
-                            <a href="{% url 'task-detail' task.id %}" style="color: var(--danger);">{{ task.title }}</a>
-                            <small style="color: var(--text-muted);"> — {{ task.planned_end_date|date:"d.m.Y" }}</small>
+                        <div class="mt-2 d-flex justify-content-between align-items-center">
+                            <div>
+                                <a href="{% url 'task-detail' task.id %}" style="color: var(--danger);">{{ task.title }}</a>
+                                <small style="color: var(--text-muted);"> — {{ task.planned_end_date|date:"d.m.Y" }}</small>
+                            </div>
+                            <a href="{% url 'task-detail' task.id %}" class="btn btn-sm" style="border: 1px solid var(--danger); color: var(--danger);">→</a>
                         </div>
                     {% endfor %}
                 </div>
@@ -211,9 +224,9 @@
                             <div>
                                 <a href="{% url 'task-detail' task.id %}" class="task-link">{{ task.title }}</a>
                                 <br>
-                                <small style="color: var(--text-muted);">
-                                    🗓 {{ task.planned_end_date|date:"d.m.Y" }} · 📁 {{ task.project.name }}
-                                </small>
+                                <a href="{% url 'project-detail' task.project.id %}" style="color: var(--accent-core); text-decoration: none;">
+    📁 {{ task.project.name }}
+</a>
                             </div>
                             <span class="badge-status
                                 {% if task.status.name == 'Новая' %}badge-new
