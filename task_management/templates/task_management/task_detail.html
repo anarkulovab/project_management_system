@@ -5,38 +5,181 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ task.title }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0A0F14;
+            --bg-surface: #141B22;
+            --primary-base: #2C3E50;
+            --accent-core: #3498DB;
+            --role-member: #9B59B6;
+            --success: #27AE60;
+            --warning: #F39C12;
+            --danger: #E74C3C;
+            --info: #1ABC9C;
+            --text-primary: #FFFFFF;
+            --text-main: #E0E4E8;
+            --text-secondary: #9AA4B0;
+            --text-muted: #7F8C8D;
+            --border-light: #E0E0E0;
+        }
+
+        body {
+            background: var(--bg-deep);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: var(--primary-base) !important;
+            border-bottom: 2px solid var(--role-member);
+        }
+
+        .user-badge { color: var(--role-member); font-weight: 600; }
+
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid #2a3a4a;
+            border-radius: 10px;
+        }
+
+        .card-header {
+            background: var(--primary-base);
+            border-bottom: 1px solid #2a3a4a;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .card-body {
+            color: var(--text-main);
+        }
+
+        .btn-back {
+            border: 1px solid #2a3a4a;
+            color: var(--text-secondary);
+        }
+        .btn-back:hover {
+            background: var(--role-member);
+            border-color: var(--role-member);
+            color: white;
+        }
+
+        .btn-primary {
+            background: var(--role-member);
+            border-color: var(--role-member);
+        }
+        .btn-primary:hover {
+            background: #8e44ad;
+            border-color: #8e44ad;
+        }
+
+        .badge-status {
+            font-size: 0.9rem;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .status-new { background: var(--info); color: #000; }
+        .status-work { background: var(--accent-core); color: white; }
+        .status-review { background: var(--warning); color: #000; }
+        .status-done { background: var(--success); color: white; }
+        .status-blocked { background: var(--danger); color: white; }
+
+        .priority-high { border-left: 4px solid var(--danger); padding-left: 10px; }
+        .priority-medium { border-left: 4px solid var(--warning); padding-left: 10px; }
+        .priority-low { border-left: 4px solid var(--success); padding-left: 10px; }
+        .priority-critical { border-left: 4px solid #6f42c1; padding-left: 10px; }
+
+        .history-entry {
+            border-left: 2px solid var(--role-member);
+            padding-left: 12px;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+
+        .comment-entry {
+            background: #1a2332;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #2a3a4a;
+        }
+
+        .comment-author {
+            color: var(--role-member);
+            font-weight: 600;
+        }
+
+        textarea.form-control {
+            background: var(--bg-deep);
+            border: 1px solid #2a3a4a;
+            color: var(--text-main);
+        }
+        textarea.form-control:focus {
+            border-color: var(--role-member);
+            box-shadow: 0 0 0 0.2rem rgba(155, 89, 182, 0.25);
+        }
+
+        .text-muted-custom { color: var(--text-muted) !important; }
+        .text-secondary-custom { color: var(--text-secondary) !important; }
+
+        hr {
+            border-color: #2a3a4a;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-dark mb-4">
         <div class="container">
-            <span class="navbar-brand">Управление проектами</span>
-            <span class="navbar-text text-white">👤 {{ user.username }}</span>
+            <span class="navbar-brand">📋 Управление проектами</span>
+            <span class="navbar-text user-badge">👤 {{ user.username }}</span>
         </div>
     </nav>
 
     <div class="container">
-        <a href="{% url 'kanban-board' %}" class="btn btn-outline-secondary mb-3">← Назад к доске</a>
+        <a href="javascript:history.back()" class="btn btn-back mb-3">← Назад</a>
 
         <div class="row">
             <!-- Основная информация -->
             <div class="col-md-8">
                 <div class="card mb-4">
                     <div class="card-body">
-                        <h2>{{ task.title }}</h2>
-                        <p class="text-muted">{{ task.description }}</p>
+                        <h2 class="mb-3" style="color: var(--text-primary);">{{ task.title }}</h2>
+                        <p class="text-secondary-custom">{{ task.description }}</p>
 
                         <hr>
 
                         <div class="row">
                             <div class="col-6">
-                                <p><strong>Статус:</strong> <span class="badge bg-primary">{{ task.status }}</span></p>
-                                <p><strong>Приоритет:</strong> {{ task.get_priority_display }}</p>
-                                <p><strong>Проект:</strong> {{ task.project.name }}</p>
+                                <p><strong>Статус:</strong>
+                                    {% if task.status.name == 'Новая' %}
+                                        <span class="badge-status status-new">{{ task.status }}</span>
+                                    {% elif task.status.name == 'В работе' %}
+                                        <span class="badge-status status-work">{{ task.status }}</span>
+                                    {% elif task.status.name == 'На проверке' %}
+                                        <span class="badge-status status-review">{{ task.status }}</span>
+                                    {% elif task.status.name == 'Готово' %}
+                                        <span class="badge-status status-done">{{ task.status }}</span>
+                                    {% elif task.status.name == 'Заблокирована' %}
+                                        <span class="badge-status status-blocked">{{ task.status }}</span>
+                                    {% else %}
+                                        <span class="badge-status status-work">{{ task.status }}</span>
+                                    {% endif %}
+                                </p>
+                                <p class="priority-{{ task.priority }}">
+                                    <strong>Приоритет:</strong> {{ task.get_priority_display }}
+                                </p>
+                                <p><strong>Проект:</strong> <span style="color: var(--accent-core);">{{ task.project.name }}</span></p>
                             </div>
                             <div class="col-6">
-                                <p><strong>Исполнитель:</strong> {{ task.assigned_to }}</p>
-                                <p><strong>Автор:</strong> {{ task.author }}</p>
-                                <p><strong>Срок:</strong> {{ task.planned_end_date|date:"d.m.Y" }}</p>
+                                <p><strong>Исполнитель:</strong> <span style="color: var(--role-member);">{{ task.assigned_to }}</span></p>
+                                <p><strong>Автор:</strong> <span style="color: var(--text-secondary);">{{ task.author }}</span></p>
+                                <p><strong>Срок:</strong>
+                                    {% if task.planned_end_date < now %}
+                                        <span style="color: var(--danger);">⚠ {{ task.planned_end_date|date:"d.m.Y" }}</span>
+                                    {% else %}
+                                        <span style="color: var(--success);">{{ task.planned_end_date|date:"d.m.Y" }}</span>
+                                    {% endif %}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -47,15 +190,16 @@
                     <div class="card-header">💬 Комментарии</div>
                     <div class="card-body">
                         {% for comment in comments %}
-                            <div class="mb-2">
-                                <strong>{{ comment.author }}</strong>
-                                <small class="text-muted">{{ comment.created_at|date:"d.m.Y H:i" }}</small>
-                                <p>{{ comment.text }}</p>
-                                <hr>
+                            <div class="comment-entry">
+                                <span class="comment-author">{{ comment.author }}</span>
+                                <small class="text-muted-custom">{{ comment.created_at|date:"d.m.Y H:i" }}</small>
+                                <p class="mt-1 mb-0">{{ comment.text }}</p>
                             </div>
                         {% empty %}
-                            <p class="text-muted">Нет комментариев</p>
+                            <p class="text-muted-custom">Нет комментариев</p>
                         {% endfor %}
+
+                        <hr>
 
                         <form method="post" action="{% url 'add-comment' task.id %}">
                             {% csrf_token %}
@@ -72,17 +216,17 @@
                     <div class="card-header">📋 История изменений</div>
                     <div class="card-body">
                         {% for entry in history %}
-                            <div class="mb-2">
-                                <small class="text-muted">{{ entry.changed_at|date:"d.m.Y H:i" }}</small>
+                            <div class="history-entry">
+                                <small class="text-muted-custom">{{ entry.changed_at|date:"d.m.Y H:i" }}</small>
                                 <br>
-                                <strong>{{ entry.user }}</strong>
+                                <strong style="color: var(--accent-core);">{{ entry.user }}</strong>
                                 <br>
-                                {{ entry.get_changed_field_display|default:entry.changed_field }}:
-                                «{{ entry.old_value }}» → «{{ entry.new_value }}»
-                                <hr>
+                                <span class="text-secondary-custom">{{ entry.changed_field }}:</span>
+                                <br>
+                                «{{ entry.old_value }}» → <span style="color: var(--role-member);">«{{ entry.new_value }}»</span>
                             </div>
                         {% empty %}
-                            <p class="text-muted">Нет изменений</p>
+                            <p class="text-muted-custom">Нет изменений</p>
                         {% endfor %}
                     </div>
                 </div>

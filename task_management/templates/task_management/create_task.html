@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создать задачу</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0A0F14;
+            --bg-surface: #141B22;
+            --primary-base: #2C3E50;
+            --role-member: #9B59B6;
+            --text-primary: #FFFFFF;
+            --text-main: #E0E4E8;
+            --text-secondary: #9AA4B0;
+            --text-muted: #7F8C8D;
+        }
+        body { background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
+        .navbar { background: var(--primary-base) !important; border-bottom: 2px solid var(--role-member); }
+        .user-badge { color: var(--role-member); font-weight: 600; }
+        .card { background: var(--bg-surface); border: 1px solid #2a3a4a; border-radius: 10px; }
+        .card-header { background: var(--primary-base); border-bottom: 1px solid #2a3a4a; color: var(--text-primary); font-weight: 600; }
+        .form-control, .form-select { background: var(--bg-deep); border: 1px solid #2a3a4a; color: var(--text-main); }
+        .form-control:focus, .form-select:focus { border-color: var(--role-member); box-shadow: 0 0 0 0.2rem rgba(155, 89, 182, 0.25); background: var(--bg-deep); color: var(--text-main); }
+        .form-label { color: var(--text-secondary); }
+        .btn-primary { background: var(--role-member); border-color: var(--role-member); }
+        .btn-primary:hover { background: #8e44ad; border-color: #8e44ad; }
+        .btn-back { border: 1px solid #2a3a4a; color: var(--text-secondary); }
+        .btn-back:hover { background: var(--role-member); border-color: var(--role-member); color: white; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark mb-4">
+        <div class="container">
+            <span class="navbar-brand">📋 Управление проектами</span>
+            <span class="navbar-text user-badge">👤 {{ user.username }}</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <a href="{% url 'kanban-board' %}" class="btn btn-back mb-3">← Назад к доске</a>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">➕ Создание задачи</div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+
+                            <div class="mb-3">
+                                <label class="form-label">Название задачи *</label>
+                                <input type="text" name="title" class="form-control" required placeholder="Введите название">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Описание</label>
+                                <textarea name="description" class="form-control" rows="3" placeholder="Опишите задачу"></textarea>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Проект *</label>
+                                    <select name="project" class="form-select" required>
+                                        <option value="">Выберите проект</option>
+                                        {% for project in projects %}
+                                            <option value="{{ project.id }}">{{ project.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Исполнитель</label>
+                                    <select name="assigned_to" class="form-select">
+                                        <option value="">Не назначен</option>
+                                        {% for user in users %}
+                                            <option value="{{ user.id }}">{{ user.username }}</option>
+                                        {% endfor %}
+                                        <option value="{{ request.user.id }}" selected>{{ request.user.username }} (я)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Приоритет</label>
+                                    <select name="priority" class="form-select">
+                                        <option value="low">🟢 Низкий</option>
+                                        <option value="medium" selected>🟡 Средний</option>
+                                        <option value="high">🔴 Высокий</option>
+                                        <option value="critical">🟣 Критический</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Срок выполнения</label>
+                                    <input type="date" name="planned_end_date" class="form-control">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">✅ Создать задачу</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
