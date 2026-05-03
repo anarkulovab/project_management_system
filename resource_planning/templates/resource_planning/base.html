@@ -1,0 +1,243 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Система управления проектами{% endblock %}</title>
+    <style>
+        :root {
+            --bg-deep: #0A0F14;
+            --bg-surface: #141B22;
+            --primary-base: #2C3E50;
+            --accent-core: #3498DB;
+            --role-leader: #3498DB;
+            --success: #27AE60;
+            --warning: #F39C12;
+            --danger: #E74C3C;
+            --info: #1ABC9C;
+            --text-primary: #FFFFFF;
+            --text-main: #E0E4E8;
+            --text-secondary: #9AA4B0;
+            --text-muted: #7F8C8D;
+            --border-light: #25323E;
+            --sidebar-width: 250px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-deep);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Боковое меню */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-light);
+            padding: 1.5rem 1rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2rem;
+            padding: 0 0.5rem;
+        }
+
+        .sidebar-logo span {
+            color: var(--accent-core);
+        }
+
+        .sidebar-section {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin: 1.5rem 0 0.5rem 0;
+            padding: 0 0.5rem;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li { margin-bottom: 0.2rem; }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem 0.75rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 0.6rem;
+            font-size: 0.9rem;
+            transition: all 0.15s;
+        }
+
+        .sidebar-nav a:hover {
+            background: #1A2530;
+            color: var(--text-primary);
+        }
+
+        .sidebar-nav a.active {
+            background: var(--accent-core);
+            color: white;
+        }
+
+        .sidebar-nav .icon {
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Основной контент */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Шапка */
+        .header {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-light);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-breadcrumb {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .header-breadcrumb span {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.4rem 1rem;
+            background: #1A2530;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            color: var(--text-main);
+        }
+
+        .user-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: var(--accent-core);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: white;
+        }
+
+        .role-tag {
+            font-size: 0.7rem;
+            color: var(--accent-core);
+            font-weight: 500;
+        }
+
+        /* Контент страницы */
+        .page-content {
+            padding: 2rem;
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Боковое меню -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">📊 <span>Projector</span></div>
+
+        <div class="sidebar-section">Основное</div>
+        <ul class="sidebar-nav">
+            <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <span class="icon">📈</span> Дашборд
+            </a></li>
+            <li><a href="{% url 'project_list' %}" class="{% if 'project' in request.resolver_match.url_name %}active{% endif %}">
+                <span class="icon">🗂️</span> Проекты
+            </a></li>
+            <li><a href="{% url 'workload' %}" class="{% if request.resolver_match.url_name == 'workload' %}active{% endif %}">
+                <span class="icon">👥</span> Загрузка команды
+            </a></li>
+        </ul>
+
+        <div class="sidebar-section">Аналитика</div>
+        <ul class="sidebar-nav">
+            <li><a href="{% url 'dashboard' %}">
+                <span class="icon">📊</span> KPI проектов
+            </a></li>
+        </ul>
+    </aside>
+
+    <!-- Основной контент -->
+    <div class="main-content">
+        <!-- Шапка -->
+        <header class="header">
+            <div class="header-left">
+                <span class="header-breadcrumb">🏠 <span>{% block page_title %}Панель управления{% endblock %}</span></span>
+            </div>
+            <div class="header-right">
+                <div class="user-badge">
+                    <div class="user-avatar">РП</div>
+                    <div>
+                        <div>Руководитель проекта</div>
+                        <div class="role-tag">Менеджер</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Контент -->
+        <main class="page-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

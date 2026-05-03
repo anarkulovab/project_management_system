@@ -1,307 +1,223 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Проекты</title>
-    <style>
-        :root {
-            --bg-deep: #0A0F14;
-            --bg-surface: #141B22;
-            --primary-base: #2C3E50;
-            --accent-core: #3498DB;
-            --success: #27AE60;
-            --warning: #F39C12;
-            --danger: #E74C3C;
-            --text-primary: #FFFFFF;
-            --text-main: #E0E4E8;
-            --text-secondary: #9AA4B0;
-            --text-muted: #7F8C8D;
-            --border-light: #25323E;
-        }
+{% extends 'resource_planning/base.html' %}
+{% load static %}
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+{% block title %}Проекты | Система управления проектами{% endblock %}
+{% block page_title %}Проекты{% endblock %}
 
-        body {
-            background-color: var(--bg-deep);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: var(--text-main);
-            padding: 2rem;
-        }
+{% block extra_head %}
+<style>
+    .filter-bar {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
 
-        .container { max-width: 1400px; margin: 0 auto; }
+    .filter-tag {
+        padding: 0.4rem 1rem;
+        border-radius: 2rem;
+        font-size: 0.8rem;
+        text-decoration: none;
+        border: 1px solid var(--border-light);
+        color: var(--text-secondary);
+        transition: all 0.2s;
+    }
 
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
+    .filter-tag:hover {
+        border-color: var(--accent-core);
+        color: var(--text-primary);
+    }
 
-        h1 {
-            font-size: 2rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
+    .filter-tag.active {
+        background: var(--accent-core);
+        border-color: var(--accent-core);
+        color: white;
+    }
 
-        .btn {
-            display: inline-block;
-            padding: 0.65rem 1.5rem;
-            border-radius: 2rem;
-            font-weight: 500;
-            font-size: 0.85rem;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+    .table-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-light);
+        border-radius: 1.2rem;
+        overflow: hidden;
+    }
 
-        .btn-primary {
-            background: var(--accent-core);
-            color: white;
-        }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
 
-        .btn-primary:hover {
-            background: #2980b9;
-        }
+    th {
+        text-align: left;
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 1rem;
+        background: #0F161E;
+        border-bottom: 1px solid var(--border-light);
+    }
 
-        .btn-outline {
-            background: transparent;
-            color: var(--accent-core);
-            border: 1px solid var(--accent-core);
-        }
+    td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-light);
+        vertical-align: middle;
+    }
 
-        .btn-outline:hover {
-            background: var(--accent-core);
-            color: white;
-        }
+    tr:hover td {
+        background: #1A253000;
+    }
 
-        .btn-sm {
-            padding: 0.35rem 0.9rem;
-            font-size: 0.75rem;
-        }
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
 
-        /* Фильтр */
-        .filter-bar {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-        }
+    .badge-active { background: #3498DB20; color: #3498DB; }
+    .badge-completed { background: #27AE6020; color: #27AE60; }
+    .badge-paused { background: #F39C1220; color: #F39C12; }
+    .badge-cancelled { background: #E74C3C20; color: #E74C3C; }
 
-        .filter-tag {
-            padding: 0.4rem 1rem;
-            border-radius: 2rem;
-            font-size: 0.8rem;
-            text-decoration: none;
-            border: 1px solid var(--border-light);
-            color: var(--text-secondary);
-            transition: all 0.2s;
-        }
+    .prio-high { color: #E74C3C; font-weight: 600; }
+    .prio-medium { color: #F39C12; font-weight: 600; }
+    .prio-low { color: #27AE60; font-weight: 600; }
+    .prio-critical { color: #E74C3C; font-weight: 700; }
 
-        .filter-tag:hover {
-            border-color: var(--accent-core);
-            color: var(--text-primary);
-        }
+    .progress-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
 
-        .filter-tag.active {
-            background: var(--accent-core);
-            border-color: var(--accent-core);
-            color: white;
-        }
+    .progress-bar {
+        height: 6px;
+        background: var(--border-light);
+        border-radius: 10px;
+        flex: 1;
+        min-width: 60px;
+    }
 
-        /* Таблица */
-        .table-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-light);
-            border-radius: 1.2rem;
-            overflow: hidden;
-        }
+    .progress-fill {
+        height: 100%;
+        border-radius: 10px;
+    }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
+    .progress-low { background: var(--danger); }
+    .progress-mid { background: var(--warning); }
+    .progress-high { background: var(--success); }
 
-        th {
-            text-align: left;
-            color: var(--text-secondary);
-            font-weight: 500;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 1rem;
-            background: #0F161E;
-            border-bottom: 1px solid var(--border-light);
-        }
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-muted);
+    }
 
-        td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-light);
-            vertical-align: middle;
-        }
+    @media (max-width: 768px) {
+        .page-content { padding: 1rem; }
+    }
+</style>
+{% endblock %}
 
-        tr:hover td {
-            background: #1A253000;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .badge-active { background: #3498DB20; color: #3498DB; }
-        .badge-completed { background: #27AE6020; color: #27AE60; }
-        .badge-paused { background: #F39C1220; color: #F39C12; }
-        .badge-cancelled { background: #E74C3C20; color: #E74C3C; }
-
-        .prio-high { color: #E74C3C; font-weight: 600; }
-        .prio-medium { color: #F39C12; font-weight: 600; }
-        .prio-low { color: #27AE60; font-weight: 600; }
-        .prio-critical { color: #E74C3C; font-weight: 700; }
-
-        .progress-cell {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .progress-bar {
-            height: 6px;
-            background: var(--border-light);
-            border-radius: 10px;
-            flex: 1;
-            min-width: 60px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            border-radius: 10px;
-        }
-
-        .progress-low { background: var(--danger); }
-        .progress-mid { background: var(--warning); }
-        .progress-high { background: var(--success); }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: var(--text-muted);
-        }
-
-        @media (max-width: 768px) {
-            body { padding: 1rem; }
-            .page-header { flex-direction: column; align-items: flex-start; }
-        }
-    </style>
-</head>
-<body>
-<div class="container">
-    <div class="page-header">
-        <h1>🗂️ Проекты</h1>
-        <a href="#" class="btn btn-primary">+ Создать проект</a>
-    </div>
-
-    <!-- Фильтр по статусу -->
-    <div class="filter-bar">
-        <a href="?status=" class="filter-tag {% if not current_filter %}active{% endif %}">Все</a>
-        {% for status in statuses %}
-            <a href="?status={{ status.name }}" class="filter-tag {% if current_filter == status.name %}active{% endif %}">
-                {{ status.name }}
-            </a>
-        {% endfor %}
-    </div>
-
-    <!-- Таблица проектов -->
-    <div class="table-card">
-        <table>
-            <thead>
-                <tr>
-                    <th>Название проекта</th>
-                    <th>Статус</th>
-                    <th>Приоритет</th>
-                    <th>Прогресс</th>
-                    <th>Дедлайн</th>
-                    <th>Руководитель</th>
-                    <th>Действия</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for project in projects %}
-                <tr>
-                    <td style="font-weight: 500;">{{ project.name }}</td>
-                    <td>
-                        {% if project.status.name == 'Активен' %}
-                            <span class="badge badge-active">{{ project.status.name }}</span>
-                        {% elif project.status.name == 'Завершён' %}
-                            <span class="badge badge-completed">{{ project.status.name }}</span>
-                        {% elif project.status.name == 'Приостановлен' %}
-                            <span class="badge badge-paused">{{ project.status.name }}</span>
-                        {% elif project.status.name == 'Отменён' %}
-                            <span class="badge badge-cancelled">{{ project.status.name }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if project.priority.name == 'Критический' %}
-                            <span class="prio-critical">{{ project.priority.name }}</span>
-                        {% elif project.priority.name == 'Высокий' %}
-                            <span class="prio-high">{{ project.priority.name }}</span>
-                        {% elif project.priority.name == 'Средний' %}
-                            <span class="prio-medium">{{ project.priority.name }}</span>
-                        {% else %}
-                            <span class="prio-low">{{ project.priority.name }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="progress-cell">
-                            <div class="progress-bar">
-                                <div class="progress-fill
-                                    {% if project.progress < 30 %}progress-low
-                                    {% elif project.progress < 70 %}progress-mid
-                                    {% else %}progress-high{% endif %}"
-                                    style="width: {{ project.progress }}%;">
-                                </div>
-                            </div>
-                            <span style="font-size: 0.8rem; color: var(--text-secondary); min-width: 35px;">{{ project.progress }}%</span>
-                        </div>
-                    </td>
-                    <td>
-                        {% if project.end_date_plan %}
-                            {{ project.end_date_plan|date:"d.m.Y" }}
-                        {% else %}
-                            <span style="color: var(--text-muted);">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if project.manager %}
-                            {{ project.manager.first_name|default:project.manager.username }}
-                        {% else %}
-                            <span style="color: var(--text-muted);">Не назначен</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{% url 'project_gantt' project.id %}" class="btn btn-outline btn-sm">📅 Гант</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7">
-                        <div class="empty-state">
-                            <p style="font-size: 1.1rem; margin-bottom: 0.3rem;">Нет проектов</p>
-                            <p style="font-size: 0.85rem;">Создайте первый проект, чтобы начать планирование</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <h1 style="font-size: 1.8rem; font-weight: 600; color: var(--text-primary);">🗂️ Проекты</h1>
+    <a href="{% url 'project_create' %}" style="display: inline-block; padding: 0.65rem 1.5rem; border-radius: 2rem; font-weight: 500; font-size: 0.85rem; text-decoration: none; background: var(--accent-core); color: white; transition: all 0.2s;">+ Создать проект</a>
 </div>
-</body>
-</html>
+
+<div class="filter-bar">
+    <a href="?status=" class="filter-tag {% if not current_filter %}active{% endif %}">Все</a>
+    {% for status in statuses %}
+        <a href="?status={{ status.name }}" class="filter-tag {% if current_filter == status.name %}active{% endif %}">
+            {{ status.name }}
+        </a>
+    {% endfor %}
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Название проекта</th>
+                <th>Статус</th>
+                <th>Приоритет</th>
+                <th>Прогресс</th>
+                <th>Дедлайн</th>
+                <th>Руководитель</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for project in projects %}
+            <tr>
+                <td style="font-weight: 500;">{{ project.name }}</td>
+                <td>
+                    {% if project.status.name == 'Активен' %}
+                        <span class="badge badge-active">{{ project.status.name }}</span>
+                    {% elif project.status.name == 'Завершён' %}
+                        <span class="badge badge-completed">{{ project.status.name }}</span>
+                    {% elif project.status.name == 'Приостановлен' %}
+                        <span class="badge badge-paused">{{ project.status.name }}</span>
+                    {% elif project.status.name == 'Отменён' %}
+                        <span class="badge badge-cancelled">{{ project.status.name }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if project.priority.name == 'Критический' %}
+                        <span class="prio-critical">{{ project.priority.name }}</span>
+                    {% elif project.priority.name == 'Высокий' %}
+                        <span class="prio-high">{{ project.priority.name }}</span>
+                    {% elif project.priority.name == 'Средний' %}
+                        <span class="prio-medium">{{ project.priority.name }}</span>
+                    {% else %}
+                        <span class="prio-low">{{ project.priority.name }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="progress-cell">
+                        <div class="progress-bar">
+                            <div class="progress-fill
+                                {% if project.progress < 30 %}progress-low
+                                {% elif project.progress < 70 %}progress-mid
+                                {% else %}progress-high{% endif %}"
+                                style="width: {{ project.progress }}%;">
+                            </div>
+                        </div>
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); min-width: 35px;">{{ project.progress }}%</span>
+                    </div>
+                </td>
+                <td>
+                    {% if project.end_date_plan %}
+                        {{ project.end_date_plan|date:"d.m.Y" }}
+                    {% else %}
+                        <span style="color: var(--text-muted);">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if project.manager %}
+                        {{ project.manager.first_name|default:project.manager.username }}
+                    {% else %}
+                        <span style="color: var(--text-muted);">Не назначен</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'project_gantt' project.id %}" style="display: inline-block; padding: 0.35rem 0.9rem; font-size: 0.75rem; border-radius: 2rem; text-decoration: none; background: transparent; color: var(--accent-core); border: 1px solid var(--accent-core); transition: all 0.2s;">📅 Гант</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="empty-state">
+                        <p style="font-size: 1.1rem; margin-bottom: 0.3rem;">Нет проектов</p>
+                        <p style="font-size: 0.85rem;">Создайте первый проект, чтобы начать планирование</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

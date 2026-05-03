@@ -1,39 +1,18 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Дашборд руководителя</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% extends 'resource_planning/base.html' %}
+{% load static %}
+
+{% block title %}Дашборд | Система управления проектами{% endblock %}
+{% block page_title %}Дашборд{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
     <style>
-        :root {
-            --bg-deep: #0A0F14;
-            --bg-surface: #141B22;
-            --primary-base: #2C3E50;
-            --accent-core: #3498DB;
-            --role-leader: #3498DB;
-            --success: #27AE60;
-            --warning: #F39C12;
-            --danger: #E74C3C;
-            --info: #1ABC9C;
-            --text-primary: #FFFFFF;
-            --text-main: #E0E4E8;
-            --text-secondary: #9AA4B0;
-            --text-muted: #7F8C8D;
-            --border-light: #25323E;
-        }
+     /* оставьте только стили, специфичные для дашборда:
+       .kpi-grid, .kpi-card, .charts-grid, .chart-card,
+       .table-card, .badge, .progress-bar */
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            background-color: var(--bg-deep);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: var(--text-main);
-            line-height: 1.5;
-            padding: 2rem;
-        }
-
-        .container { max-width: 1400px; margin: 0 auto; }
 
         h1 {
             font-size: 2rem;
@@ -177,11 +156,16 @@
             body { padding: 1rem; }
         }
     </style>
-</head>
-<body>
-<div class="container">
-    <h1>📊 Панель руководителя</h1>
-    <p class="subtitle">Обзор проектов · KPI · Загрузка команды</p>
+
+{% endblock %}
+
+{% block content %}
+<div>
+    <h1 style="font-size: 1.8rem; font-weight: 600; margin-bottom: 0.3rem;">📊 Панель руководителя</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 2rem;">Обзор проектов · KPI · Загрузка команды</p>
+
+    <!-- KPI-карточки, графики, таблица — оставьте как было -->
+    <div class="container">
 
     <!-- KPI карточки -->
     <div class="kpi-grid">
@@ -293,7 +277,11 @@
         </table>
     </div>
 </div>
+</div>
 
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
     // График: Прогресс проектов
     const ctx1 = document.getElementById('progressChart').getContext('2d');
@@ -346,5 +334,4 @@
         }
     });
 </script>
-</body>
-</html>
+{% endblock %}

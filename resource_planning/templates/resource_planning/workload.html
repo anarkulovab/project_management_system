@@ -1,0 +1,184 @@
+{% extends 'resource_planning/base.html' %}
+{% load static %}
+
+{% block title %}Загрузка команды | Система управления проектами{% endblock %}
+{% block page_title %}Загрузка команды{% endblock %}
+
+{% block extra_head %}
+<style>
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .summary-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-light);
+        border-radius: 1rem;
+        padding: 1.2rem;
+    }
+
+    .summary-label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+    }
+
+    .summary-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-top: 0.3rem;
+    }
+
+    .week-nav {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .week-nav a {
+        color: var(--accent-core);
+        text-decoration: none;
+        font-size: 1.2rem;
+        padding: 0.3rem 0.6rem;
+    }
+
+    .week-nav span {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+
+    .table-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-light);
+        border-radius: 1.2rem;
+        overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+
+    th {
+        text-align: left;
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        padding: 1rem;
+        background: #0F161E;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    td {
+        padding: 0.9rem 1rem;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .load-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .load-dot {
+        width: 10px; height: 10px;
+        border-radius: 50%;
+    }
+
+    .load-success .load-dot { background: var(--success); }
+    .load-warning .load-dot { background: var(--warning); }
+    .load-danger .load-dot { background: var(--danger); }
+
+    .progress-bar {
+        height: 6px;
+        background: var(--border-light);
+        border-radius: 10px;
+        width: 100px;
+    }
+
+    .progress-fill { height: 100%; border-radius: 10px; }
+    .progress-success { background: var(--success); }
+    .progress-warning { background: var(--warning); }
+    .progress-danger { background: var(--danger); }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-muted);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.8rem; font-weight: 600; color: var(--text-primary);">👥 Загрузка команды</h1>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+            {{ week_start|date:"d.m.Y" }} – {{ week_end|date:"d.m.Y" }}
+        </p>
+    </div>
+    <div class="week-nav">
+        <a href="?week_offset={{ offset|add:-1 }}">←</a>
+        <span>Неделя</span>
+        <a href="?week_offset={{ offset|add:1 }}">→</a>
+    </div>
+</div>
+
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="summary-label">Сотрудников</div>
+        <div class="summary-value">{{ workload_data|length }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">Средняя загрузка</div>
+        <div class="summary-value">{{ avg_load }}%</div>
+    </div>
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Сотрудник</th>
+                <th>Плановые часы</th>
+                <th>Факт. часы</th>
+                <th>Доступный фонд</th>
+                <th>Загрузка</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in workload_data %}
+            <tr>
+                <td style="font-weight: 500;">{{ row.user.get_full_name|default:row.user.username }}</td>
+                <td>{{ row.planned }} ч</td>
+                <td>{{ row.actual }} ч</td>
+                <td>{{ row.available }} ч</td>
+                <td>
+                    <div class="load-indicator 
+                        {% if row.load_class == 'success' %}load-success
+                        {% elif row.load_class == 'warning' %}load-warning
+                        {% else %}load-danger{% endif %}">
+                        <span class="load-dot"></span>
+                        <span>{{ row.load_percent }}%</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill 
+                                {% if row.load_class == 'success' %}progress-success
+                                {% elif row.load_class == 'warning' %}progress-warning
+                                {% else %}progress-danger{% endif %}"
+                                style="width: {% if row.load_percent > 100 %}100{% else %}{{ row.load_percent }}{% endif %}%">
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5"><div class="empty-state">Нет данных о загрузке</div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

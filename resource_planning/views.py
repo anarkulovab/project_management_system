@@ -1,11 +1,19 @@
 from django.shortcuts import render
 from django.db.models import Count, Sum, Q, Avg
 from django.utils import timezone
-from datetime import date
-from .models import Project, TaskAssignment, KPI, ProjectStatus
-from task_management.models import Task
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.models import User
+from django.shortcuts import redirect
+from .models import Project, TaskAssignment, KPI, ProjectStatus, UserAbsence
+from task_management.models import Task, TaskStatus
+from .forms import ProjectForm
+import json
+from datetime import datetime, date, timedelta
+from django.db import models
 
-
+# Дашборды
 def dashboard(request):
     # Ключевые метрики
     total_projects = Project.objects.count()
@@ -57,7 +65,7 @@ def dashboard(request):
     return render(request, 'resource_planning/dashboard.html', context)
 
 
-
+# Список проектов
 def project_list(request):
     # Получаем параметр фильтра из URL (?status=Активен)
     status_filter = request.GET.get('status', '')
@@ -85,3 +93,215 @@ def project_list(request):
 def project_gantt(request, project_id):
     project = Project.objects.get(id=project_id)
     return render(request, 'resource_planning/project_gantt.html', {'project': project})
+
+# Создание проекта
+def project_create(request):
+    if request.method == 'POST':
+        form = ProjectForm(request.POST)
+        if form.is_valid():
+            project = form.save(commit=False)
+            # Устанавливаем статус "Активен" по умолчанию
+            default_status = ProjectStatus.objects.get(name='Активен')
+            project.status = default_status
+            # Назначаем текущего пользователя руководителем
+            project.manager = request.user
+            project.save()
+            return redirect('project_list')
+    else:
+        form = ProjectForm()
+
+    return render(request, 'resource_planning/project_create.html', {'form': form})
+
+
+# Диаграмма Ганта
+def project_gantt(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    users = User.objects.filter(is_active=True, is_superuser=False)
+    return render(request, 'resource_planning/project_gantt.html', {
+        'project': project,
+        'users': users,
+    })
+
+
+# Задачи проекта
+def project_tasks_api(request, project_id):
+    tasks = Task.objects.filter(project_id=project_id).select_related('status', 'assigned_to')
+    events = []
+    for task in tasks:
+        start = task.planned_start_date if hasattr(task, 'planned_start_date') and task.planned_start_date else task.created_at
+        events.append({
+            'id': task.id,
+            'title': task.title,
+            'start': start.isoformat(),
+            'end': task.planned_end_date.isoformat() if task.planned_end_date else None,
+            'color': get_status_color(task.status.name if task.status else ''),
+            'extendedProps': {
+                'status': task.status.name if task.status else 'Без статуса',
+                'assignee': task.assigned_to.get_full_name() if task.assigned_to else 'Не назначен',
+                'priority': task.priority,
+            }
+        })
+    return JsonResponse(events, safe=False)
+
+
+def get_status_color(status_name):
+    """Возвращает цвет задачи в зависимости от статуса."""
+    colors = {
+        'Новая': '#3498DB',
+        'В работе': '#F39C12',
+        'На проверке': '#1ABC9C',
+        'Готово': '#27AE60',
+        'Заблокирована': '#E74C3C',
+    }
+    return colors.get(status_name, '#7F8C8D')
+
+
+# Создание задач
+from datetime import datetime
+
+
+@csrf_exempt
+def task_create_api(request, project_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Метод не поддерживается'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Некорректный JSON'}, status=400)
+
+    title = data.get('title', 'Без названия')
+    start_str = data.get('start')
+    end_str = data.get('end')
+
+    project = get_object_or_404(Project, id=project_id)
+    default_status = TaskStatus.objects.filter(name='Новая').first()
+
+    start_date = datetime.fromisoformat(start_str) if start_str else None
+    end_date = datetime.fromisoformat(end_str) if end_str else None
+
+    task = Task.objects.create(
+        title=title,
+        project=project,
+        status=default_status,
+        priority=data.get('priority', 'medium'),
+        planned_start_date=start_date,
+        planned_end_date=end_date,
+        author=request.user,
+    )
+
+    assignee_id = data.get('assignee_id')
+    if assignee_id:
+        try:
+            assignee = User.objects.get(id=assignee_id)
+            task.assigned_to = assignee
+            task.save()
+
+            # Создаём назначение для расчёта загрузки
+            TaskAssignment.objects.create(
+                task=task,
+                user=assignee,
+                planned_hours=data.get('planned_hours', 0),
+            )
+        except User.DoesNotExist:
+            pass
+
+    return JsonResponse({
+        'id': task.id,
+        'title': task.title,
+        'start': task.planned_start_date.isoformat() if task.planned_start_date else task.created_at.isoformat(),
+        'end': task.planned_end_date.isoformat() if task.planned_end_date else None,
+        'color': '#3498DB',
+        'extendedProps': {
+            'status': task.status.name if task.status else 'Новая',
+            'assignee': task.assigned_to.get_full_name() if task.assigned_to else 'Не назначен',
+            'priority': task.priority,
+        }
+    }, status=201)
+
+def workload(request):
+    # Определяем текущую неделю
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+
+    # Параметр для переключения недель (?week_offset=1)
+    offset = int(request.GET.get('week_offset', 0))
+    if offset != 0:
+        week_start = week_start + timedelta(weeks=offset)
+        week_end = week_end + timedelta(weeks=offset)
+
+    # Все активные пользователи (кроме суперпользователя)
+    users = User.objects.filter(is_active=True, is_superuser=False)
+
+    workload_data = []
+    total_planned = 0
+    total_actual = 0
+
+    for user in users:
+        # Плановые часы из назначений за период
+        planned = TaskAssignment.objects.filter(
+            user=user,
+            task__planned_end_date__gte=week_start,
+            task__planned_end_date__lte=week_end
+        ).aggregate(total=models.Sum('planned_hours'))['total'] or 0
+
+        # Фактические часы за период
+        actual = TaskAssignment.objects.filter(
+            user=user,
+            task__planned_end_date__gte=week_start,
+            task__planned_end_date__lte=week_end
+        ).aggregate(total=models.Sum('actual_hours'))['total'] or 0
+
+        # Доступный фонд (8 часов × 5 дней = 40 часов в неделю)
+        available = 40
+
+        # Вычитаем отсутствия
+        absences = UserAbsence.objects.filter(
+            user=user,
+            start_date__lte=week_end,
+            end_date__gte=week_start
+        )
+        for absence in absences:
+            # Вычисляем пересечение отсутствия с текущей неделей
+            absence_start = max(absence.start_date, week_start)
+            absence_end = min(absence.end_date, week_end)
+            days_absent = (absence_end - absence_start).days + 1
+            available -= days_absent * 8
+
+        # Процент загрузки
+        if available > 0:
+            load_percent = int((planned / available) * 100)
+        else:
+            load_percent = 0
+
+        total_planned += planned
+        total_actual += actual
+
+        # Цвет индикации
+        if load_percent > 100:
+            load_class = 'danger'
+        elif load_percent >= 80:
+            load_class = 'warning'
+        else:
+            load_class = 'success'
+
+        workload_data.append({
+            'user': user,
+            'planned': planned,
+            'actual': actual,
+            'available': available,
+            'load_percent': load_percent,
+            'load_class': load_class,
+        })
+
+    avg_load = int(total_planned / (len(users) * 40) * 100) if users else 0
+
+    context = {
+        'workload_data': workload_data,
+        'week_start': week_start,
+        'week_end': week_end,
+        'offset': offset,
+        'avg_load': avg_load,
+    }
+    return render(request, 'resource_planning/workload.html', context)

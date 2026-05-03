@@ -34,6 +34,7 @@ class Task(models.Model):
     description = models.TextField(blank=True, verbose_name="Описание")
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium', verbose_name="Приоритет")
     planned_end_date = models.DateTimeField(verbose_name="Плановый срок")
+    planned_start_date = models.DateTimeField(null=True, blank=True, verbose_name="Плановое начало")
 
     # Связь с проектом пока закомментирована — ждём модель от Бегимай
     project = models.ForeignKey(
