@@ -107,7 +107,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/resource/'
+LOGIN_REDIRECT_URL = '/accounts/redirect/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # Internationalization

@@ -3,10 +3,10 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import date, timedelta
 from resource_planning.models import (
-    Role, ProjectStatus, Priority, AbsenceType,
+    ProjectStatus, Priority, AbsenceType,
     ProbabilityLevel, ImpactLevel, RiskStatus,
     Project, TaskAssignment, UserAbsence,
-    Risk, RiskHistory, Budget, KPI
+    Risk, RiskHistory, Budget, KPI, Employee
 )
 from task_management.models import Task, TaskStatus
 
@@ -18,12 +18,6 @@ class Command(BaseCommand):
         # ---------------------------------------------------
         # 1. СПРАВОЧНИКИ
         # ---------------------------------------------------
-
-        # Роли
-        director_role, _ = Role.objects.get_or_create(name='Директор', defaults={'description': 'Высшее руководство'})
-        manager_role, _ = Role.objects.get_or_create(name='Руководитель проекта', defaults={'description': 'Менеджер команды'})
-        executor_role, _ = Role.objects.get_or_create(name='Исполнитель', defaults={'description': 'Участник команды'})
-        self.stdout.write(self.style.SUCCESS('✓ Роли созданы'))
 
         # Статусы проектов
         status_active, _ = ProjectStatus.objects.get_or_create(name='Активен')
@@ -569,3 +563,15 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('=' * 60))
         self.stdout.write(self.style.SUCCESS('ВСЕ ТЕСТОВЫЕ ДАННЫЕ УСПЕШНО ЗАГРУЖЕНЫ'))
         self.stdout.write(self.style.SUCCESS('=' * 60))
+
+        # ---------------------------------------------------
+        # 12. СВЯЗЬ РУКОВОДИТЕЛЬ — ИСПОЛНИТЕЛИ (Employee)
+        # ---------------------------------------------------
+        manager = User.objects.get(username='manager')
+        executor1 = User.objects.get(username='executor1')
+        executor2 = User.objects.get(username='executor2')
+
+        Employee.objects.get_or_create(manager=manager, employee=executor1)
+        Employee.objects.get_or_create(manager=manager, employee=executor2)
+
+        self.stdout.write(self.style.SUCCESS('✓ Связи руководитель-исполнители созданы'))

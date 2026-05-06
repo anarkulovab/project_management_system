@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.shortcuts import redirect
 from .models import Project, TaskAssignment, KPI, ProjectStatus, UserAbsence, Priority, Employee
 from task_management.models import Task, TaskStatus
@@ -398,7 +398,8 @@ def add_employee(request):
                 first_name=first_name,
                 last_name=last_name,
             )
-
+            executor_group = Group.objects.get(name='Исполнитель')
+            user.groups.add(executor_group)
             Employee.objects.create(manager=request.user, employee=user)
             messages.success(
                 request,
@@ -408,3 +409,15 @@ def add_employee(request):
         return redirect('team')
 
     return redirect('team')
+
+
+def redirect_by_role(request):
+    user = request.user
+    if user.groups.filter(name='Руководитель проекта').exists():
+        return redirect('dashboard')
+    elif user.groups.filter(name='Исполнитель').exists():
+        return redirect('/tasks/board')
+    elif user.groups.filter(name='Директор').exists():
+        return redirect('/tasks/')  # позже — десктоп Насти
+
+    return redirect('dashboard')

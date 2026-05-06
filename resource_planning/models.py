@@ -3,17 +3,7 @@ from django.contrib.auth.models import User
 
 # СПРАВОЧНИКИ
 
-# 1. Роли пользователей
-class Role(models.Model):
-    name = models.CharField(max_length=100, unique=True, verbose_name="Название роли")
-    description = models.TextField(blank=True, verbose_name="Описание роли")
-
-    class Meta:
-        verbose_name = "Роль"
-        verbose_name_plural = "Роли"
-
-    def __str__(self):
-        return self.name
+# 1. Роли пользователей - были удалены так как используются готовые модели django
 
 
 # 2. Статусы проектов

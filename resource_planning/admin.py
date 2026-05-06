@@ -1,12 +1,11 @@
 from django.contrib import admin
 from .models import (
-    Role, ProjectStatus, Priority, AbsenceType,
+    ProjectStatus, Priority, AbsenceType,
     ProbabilityLevel, ImpactLevel, RiskStatus,
     Project, TaskAssignment, UserAbsence,
     Risk, RiskHistory, Budget, KPI
 )
 
-admin.site.register(Role)
 admin.site.register(ProjectStatus)
 admin.site.register(Priority)
 admin.site.register(AbsenceType)
