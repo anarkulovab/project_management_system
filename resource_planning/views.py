@@ -6,12 +6,15 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
-from .models import Project, TaskAssignment, KPI, ProjectStatus, UserAbsence, Priority
+from .models import Project, TaskAssignment, KPI, ProjectStatus, UserAbsence, Priority, Employee
 from task_management.models import Task, TaskStatus
 from .forms import ProjectForm
 import json
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 from django.db import models
+from django.contrib import messages
+import random
+import string
 
 # Дашборды
 def dashboard(request):
@@ -217,56 +220,52 @@ def task_create_api(request, project_id):
     }, status=201)
 
 def workload(request):
-    # Определяем текущую неделю
     today = date.today()
     week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=6)
 
-    # Параметр для переключения недель (?week_offset=1)
     offset = int(request.GET.get('week_offset', 0))
     if offset != 0:
         week_start = week_start + timedelta(weeks=offset)
         week_end = week_end + timedelta(weeks=offset)
 
-    # Все активные пользователи (кроме суперпользователя)
-    users = User.objects.filter(is_active=True, is_superuser=False)
+    # Фильтр по проекту
+    project_id = request.GET.get('project_id', '')
+    selected_project = None
+    if project_id:
+        selected_project = get_object_or_404(Project, id=project_id)
+        users = User.objects.filter(participating_projects=selected_project).distinct()
+    else:
+        users = User.objects.filter(is_active=True, is_superuser=False)
 
     workload_data = []
     total_planned = 0
     total_actual = 0
 
     for user in users:
-        # Плановые часы из назначений за период
-        planned = TaskAssignment.objects.filter(
+        assignments = TaskAssignment.objects.filter(
             user=user,
             task__planned_end_date__gte=week_start,
             task__planned_end_date__lte=week_end
-        ).aggregate(total=models.Sum('planned_hours'))['total'] or 0
+        )
+        if project_id:
+            assignments = assignments.filter(task__project_id=project_id)
 
-        # Фактические часы за период
-        actual = TaskAssignment.objects.filter(
-            user=user,
-            task__planned_end_date__gte=week_start,
-            task__planned_end_date__lte=week_end
-        ).aggregate(total=models.Sum('actual_hours'))['total'] or 0
+        planned = assignments.aggregate(total=models.Sum('planned_hours'))['total'] or 0
+        actual = assignments.aggregate(total=models.Sum('actual_hours'))['total'] or 0
 
-        # Доступный фонд (8 часов × 5 дней = 40 часов в неделю)
         available = 40
-
-        # Вычитаем отсутствия
         absences = UserAbsence.objects.filter(
             user=user,
             start_date__lte=week_end,
             end_date__gte=week_start
         )
         for absence in absences:
-            # Вычисляем пересечение отсутствия с текущей неделей
             absence_start = max(absence.start_date, week_start)
             absence_end = min(absence.end_date, week_end)
             days_absent = (absence_end - absence_start).days + 1
             available -= days_absent * 8
 
-        # Процент загрузки
         if available > 0:
             load_percent = int((planned / available) * 100)
         else:
@@ -275,7 +274,6 @@ def workload(request):
         total_planned += planned
         total_actual += actual
 
-        # Цвет индикации
         if load_percent > 100:
             load_class = 'danger'
         elif load_percent >= 80:
@@ -294,12 +292,17 @@ def workload(request):
 
     avg_load = int(total_planned / (len(users) * 40) * 100) if users else 0
 
+    # Список проектов для фильтра
+    projects = Project.objects.filter(manager=request.user) if request.user.is_authenticated else Project.objects.all()
+
     context = {
         'workload_data': workload_data,
         'week_start': week_start,
         'week_end': week_end,
         'offset': offset,
         'avg_load': avg_load,
+        'projects': projects,
+        'selected_project': selected_project,
     }
     return render(request, 'resource_planning/workload.html', context)
 
@@ -340,3 +343,60 @@ def project_edit(request, project_id):
         'users': users,
     }
     return render(request, 'resource_planning/project_edit.html', context)
+
+def team(request):
+    """Страница команды руководителя."""
+    employees = Employee.objects.filter(manager=request.user).select_related('employee')
+    context = {
+        'employees': employees,
+    }
+    return render(request, 'resource_planning/team.html', context)
+
+
+def add_employee(request):
+    """Добавление нового сотрудника в команду."""
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+
+        if not email:
+            messages.error(request, 'Email обязателен')
+            return redirect('team')
+
+        # Проверяем, существует ли пользователь с таким email
+        user = User.objects.filter(email=email).first()
+
+        if user:
+            # Пользователь уже существует — проверяем, не добавлен ли уже
+            if Employee.objects.filter(manager=request.user, employee=user).exists():
+                messages.warning(request, f'{user.get_full_name() or user.username} уже в вашей команде')
+            else:
+                Employee.objects.create(manager=request.user, employee=user)
+                messages.success(request, f'{user.get_full_name() or user.username} добавлен в команду')
+        else:
+            # Создаём нового пользователя
+            username = email.split('@')[0]
+            # Проверяем уникальность логина
+            if User.objects.filter(username=username).exists():
+                username = f"{username}{random.randint(100, 999)}"
+
+            password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+            )
+
+            Employee.objects.create(manager=request.user, employee=user)
+            messages.success(
+                request,
+                f'Сотрудник создан. Логин: {username}, Пароль: {password}. Передайте эти данные сотруднику.'
+            )
+
+        return redirect('team')
+
+    return redirect('team')

@@ -1,230 +1,151 @@
+{% extends 'resource_planning/base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Диаграмма Ганта: {{ project.name }}</title>
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
-    <style>
-        :root {
-            --bg-deep: #0A0F14;
-            --bg-surface: #141B22;
-            --accent-core: #3498DB;
-            --text-primary: #FFFFFF;
-            --text-main: #E0E4E8;
-            --text-secondary: #9AA4B0;
-            --border-light: #25323E;
-        }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+{% block title %}Диаграмма Ганта: {{ project.name }} | Projector{% endblock %}
+{% block page_title %}Диаграмма Ганта{% endblock %}
 
-        body {
-            background-color: var(--bg-deep);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: var(--text-main);
-            padding: 1.5rem;
-        }
+{% block extra_head %}
+<!-- FullCalendar -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 
-        .container { max-width: 1400px; margin: 0 auto; }
+<style>
+    /* Контейнер */
+    .gantt-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: var(--shadow);
+    }
 
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
+    /* Переопределение стилей FullCalendar под светлую тему */
+    .fc {
+        --fc-border-color: #e8e8f0;
+        --fc-page-bg-color: #ffffff;
+        --fc-neutral-bg-color: #fafbfe;
+        --fc-list-event-hover-bg-color: #f0f3ff;
+        --fc-today-bg-color: rgba(116, 148, 236, 0.06);
+    }
 
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
+    .fc .fc-toolbar-title {
+        color: var(--text-heading);
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
 
-        .btn {
-            display: inline-block;
-            padding: 0.6rem 1.4rem;
-            border-radius: 2rem;
-            font-weight: 500;
-            font-size: 0.85rem;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
+    .fc .fc-button {
+        background: var(--surface);
+        border-color: var(--border);
+        color: var(--text-main);
+        font-weight: 500;
+        text-transform: capitalize;
+        font-size: 0.8rem;
+        padding: 6px 12px;
+        border-radius: 8px;
+    }
 
-        .btn-back {
-            background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--border-light);
-        }
+    .fc .fc-button:hover {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
 
-        .btn-back:hover {
-            border-color: var(--text-secondary);
-            color: var(--text-primary);
-        }
+    .fc .fc-button-active {
+        background: var(--primary) !important;
+        border-color: var(--primary) !important;
+        color: #ffffff !important;
+    }
 
-        .btn-primary {
-            background: var(--accent-core);
-            color: white;
-        }
+    .fc th {
+        background: #fafbfe;
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.75rem;
+    }
 
-        .btn-primary:hover {
-            background: #2980b9;
-        }
+    .fc .fc-timegrid-slot,
+    .fc .fc-daygrid-day {
+        background: var(--surface);
+    }
 
-        .gantt-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-light);
-            border-radius: 1.2rem;
-            padding: 1.5rem;
-        }
+    .fc-event {
+        border: none !important;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 12px;
+        cursor: pointer;
+        font-weight: 500;
+    }
 
-        #calendar {
-            color: #0A0F14;
-        }
-
-        /* Переопределение стилей FullCalendar */
-        .fc {
-            --fc-border-color: #25323E;
-            --fc-page-bg-color: #141B22;
-            --fc-neutral-bg-color: #141B22;
-            --fc-list-event-hover-bg-color: #1A2530;
-        }
-
-        .fc .fc-toolbar-title {
-            color: var(--text-primary);
-            font-size: 1.1rem;
-        }
-
-        .fc .fc-button {
-            background: #1E2A36;
-            border-color: var(--border-light);
-            color: var(--text-main);
-        }
-
-        .fc .fc-button:hover {
-            background: #2C3E50;
-        }
-
-        .fc .fc-button-active {
-            background: var(--accent-core) !important;
-            border-color: var(--accent-core) !important;
-        }
-
-        .fc th {
-            background: #0F161E;
-            color: var(--text-secondary);
-        }
-
-        .fc .fc-timegrid-slot {
-            background: #141B22;
-        }
-
-        .fc .fc-day-today {
-            background: #3498DB08 !important;
-        }
-
-        .fc-event {
-            border: none;
-            border-radius: 0.4rem;
-            padding: 0.2rem 0.4rem;
-            font-size: 0.8rem;
-            cursor: pointer;
-        }
-
-        @media (max-width: 768px) {
-            body { padding: 0.5rem; }
-        }
-
-        /* Модальное окно */
-        .modal-overlay {
+    /* Модальное окно для создания задачи */
+    .modal-overlay {
         display: none;
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.6);
-        z-index: 1000;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.3);
+        z-index: 2000;
         justify-content: center;
-        align-items: center;
+        align-items: flex-start;
+        padding-top: 80px;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+    }
+
+    .modal-card {
+        background: var(--surface);
+        border-radius: 18px;
+        padding: 28px;
+        width: 100%;
+        max-width: 480px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+
+    .modal-card h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-heading);
+        margin-bottom: 18px;
+    }
+
+    @media (max-width: 750px) {
+        .fc .fc-toolbar {
+            flex-wrap: wrap;
+            gap: 6px;
         }
+    }
+</style>
+{% endblock %}
 
-        .modal-overlay.active { display: flex; }
+{% block content %}
 
-        .modal-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-light);
-            border-radius: 1.2rem;
-            padding: 2rem;
-            width: 100%;
-            max-width: 480px;
-        }
-
-        .modal-card h3 {
-            font-size: 1.3rem;
-            color: var(--text-primary);
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.2rem;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.3rem;
-        }
-
-        .form-input, .form-textarea, .form-select {
-            width: 100%;
-            padding: 0.6rem 0.9rem;
-            background: #0F161E;
-            border: 1px solid var(--border-light);
-            border-radius: 0.7rem;
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-
-        .form-textarea { resize: vertical; min-height: 60px; }
-
-        .form-actions {
-            display: flex;
-            gap: 0.8rem;
-            margin-top: 1.5rem;
-            justify-content: flex-end;
-        }
-    </style>
-</head>
-<body>
-<div class="container">
-    <div class="page-header">
-        <div>
-            <h1>📅 {{ project.name }}</h1>
-            <p style="color: var(--text-secondary); font-size: 0.9rem;">Диаграмма Ганта</p>
-        </div>
-        <div style="display: flex; gap: 0.5rem;">
-            <a href="{% url 'project_list' %}" class="btn btn-back">← К списку проектов</a>
-        </div>
-    </div>
-
-    <div class="gantt-card">
-        <div id="calendar"></div>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+    <div>
+        <h1 class="page-title">{{ project.name }}</h1>
+        <p class="page-subtitle">
+            <a href="{% url 'project_detail' project.id %}" style="color: var(--primary);">← К проекту</a>
+            &nbsp;&middot;&nbsp;
+            <a href="{% url 'project_list' %}" style="color: var(--text-secondary);">К списку проектов</a>
+        </p>
     </div>
 </div>
+
+<div class="gantt-card">
+    <div id="calendar"></div>
+</div>
+
 <!-- Модальное окно создания задачи -->
 <div class="modal-overlay" id="create-modal">
     <div class="modal-card">
-        <h3>📝 Новая задача</h3>
+        <h3>Новая задача</h3>
+
         <div class="form-group">
-            <label>Название задачи</label>
+            <label class="form-label" for="task-title">Название задачи</label>
             <input type="text" id="task-title" class="form-input" placeholder="Введите название">
         </div>
+
         <div class="form-group">
-            <label>Приоритет</label>
+            <label class="form-label" for="task-priority">Приоритет</label>
             <select id="task-priority" class="form-select">
                 <option value="low">Низкий</option>
                 <option value="medium" selected>Средний</option>
@@ -232,8 +153,9 @@
                 <option value="critical">Критический</option>
             </select>
         </div>
+
         <div class="form-group">
-            <label>Исполнитель</label>
+            <label class="form-label" for="task-assignee">Исполнитель</label>
             <select id="task-assignee" class="form-select">
                 <option value="">— Не назначен —</option>
                 {% for user in users %}
@@ -241,15 +163,20 @@
                 {% endfor %}
             </select>
         </div>
+
         <input type="hidden" id="task-start">
         <input type="hidden" id="task-end">
 
-        <div class="form-actions">
-            <button type="button" class="btn btn-back" onclick="closeCreateModal()">Отмена</button>
+        <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+            <button type="button" class="btn btn-outline" onclick="closeCreateModal()">Отмена</button>
             <button type="button" class="btn btn-primary" onclick="submitTask()">Создать задачу</button>
         </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
@@ -258,7 +185,7 @@
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
-                right: 'dayGridMonth,timeGridWeek'
+                right: 'multiMonthYear,dayGridMonth,timeGridWeek'
             },
             locale: 'ru',
             firstDay: 1,
@@ -267,16 +194,18 @@
             selectable: true,
             events: '{% url "project_tasks_api" project.id %}',
             select: function(info) {
-                openCreateModal(info.startStr, info.endStr);
+                document.getElementById('task-start').value = info.startStr;
+                document.getElementById('task-end').value = info.endStr;
+                document.getElementById('create-modal').classList.add('active');
             },
             eventClick: function(info) {
                 var event = info.event;
                 var props = event.extendedProps;
                 alert(
                     'Задача: ' + event.title +
-                    '\nСтатус: ' + props.status +
-                    '\nИсполнитель: ' + props.assignee +
-                    '\nПриоритет: ' + props.priority +
+                    '\nСтатус: ' + (props.status || '—') +
+                    '\nИсполнитель: ' + (props.assignee || '—') +
+                    '\nПриоритет: ' + (props.priority || '—') +
                     '\nСрок: ' + (event.endStr || 'не указан')
                 );
             },
@@ -287,18 +216,12 @@
             }
         });
         calendar.render();
-
         window.calendarInstance = calendar;
     });
 
-    function openCreateModal(startStr, endStr) {
-        document.getElementById('task-start').value = startStr;
-        document.getElementById('task-end').value = endStr;
-        document.getElementById('create-modal').classList.add('active');
-    }
-
     function closeCreateModal() {
         document.getElementById('create-modal').classList.remove('active');
+        document.getElementById('task-title').value = '';
     }
 
     async function submitTask() {
@@ -325,7 +248,6 @@
                 var newEvent = await response.json();
                 window.calendarInstance.addEvent(newEvent);
                 closeCreateModal();
-                document.getElementById('task-title').value = '';
             } else {
                 alert('Ошибка при создании задачи');
             }
@@ -333,7 +255,10 @@
             alert('Ошибка: ' + e.message);
         }
     }
-</script>
 
-</body>
-</html>
+    // Закрытие модального окна по клику на оверлей
+    document.getElementById('create-modal').addEventListener('click', function(e) {
+        if (e.target === this) { closeCreateModal(); }
+    });
+</script>
+{% endblock %}

@@ -279,3 +279,27 @@ class KPI(models.Model):
 
     def __str__(self):
         return f"{self.name} = {self.value} ({self.project.name})"
+
+# 15. СВЯЗЬ РУКОВОДИТЕЛЬ — ИСПОЛНИТЕЛИ
+class Employee(models.Model):
+    manager = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='subordinates',
+        verbose_name="Руководитель"
+    )
+    employee = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='manager_relation',
+        verbose_name="Сотрудник"
+    )
+    added_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата добавления")
+
+    class Meta:
+        verbose_name = "Сотрудник руководителя"
+        verbose_name_plural = "Сотрудники руководителя"
+        unique_together = ['manager', 'employee']
+
+    def __str__(self):
+        return f"{self.employee.get_full_name() or self.employee.username} → руководитель: {self.manager.get_full_name() or self.manager.username}"

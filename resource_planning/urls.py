@@ -11,4 +11,6 @@ urlpatterns = [
     path('workload/', views.workload, name='workload'),
     path('projects/<int:project_id>/', views.project_detail, name='project_detail'),
     path('projects/<int:project_id>/edit/', views.project_edit, name='project_edit'),
+    path('team/', views.team, name='team'),
+    path('team/add-employee/', views.add_employee, name='add_employee'),
 ]

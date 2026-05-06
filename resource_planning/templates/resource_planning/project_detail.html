@@ -219,10 +219,7 @@
             <span class="detail-value">{{ project.end_date_fact|date:"d.m.Y" }}</span>
         </div>
         {% endif %}
-        <div class="detail-row">
-            <span class="detail-label">Руководитель</span>
-            <span class="detail-value">{{ project.manager.get_full_name|default:project.manager.username }}</span>
-        </div>
+
     </div>
 
     <div class="detail-card">
@@ -261,6 +258,20 @@
     <p style="font-size: 13px;">Участники не назначены</p>
 </div>
 {% endif %}
+
+<!-- ===== Загрузка команды проекта (кратко) ===== -->
+<h3 class="section-title">Загрузка команды</h3>
+<div style="display: flex; gap: 15px; margin-bottom: 10px; flex-wrap: wrap;">
+    <div class="sum-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 22px; box-shadow: var(--shadow); flex: 1; min-width: 140px;">
+        <div class="label" style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; margin-bottom: 4px;">Средняя загрузка</div>
+        <div class="value" style="font-size: 26px; font-weight: 600; color: var(--text-heading);">{{ avg_load|default:"—" }}%</div>
+    </div>
+    <div class="sum-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 22px; box-shadow: var(--shadow); flex: 1; min-width: 140px;">
+        <div class="label" style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; margin-bottom: 4px;">Участников</div>
+        <div class="value" style="font-size: 26px; font-weight: 600; color: var(--text-heading);">{{ participants|length }}</div>
+    </div>
+</div>
+<a href="{% url 'workload' %}?project_id={{ project.id }}" style="font-size: 13px; color: var(--primary); text-decoration: none;">Подробная загрузка →</a>
 
 <!-- ===== Задачи проекта ===== -->
 <h3 class="section-title">Задачи проекта</h3>
