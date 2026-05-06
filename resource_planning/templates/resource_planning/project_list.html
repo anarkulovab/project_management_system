@@ -182,7 +182,6 @@
                 <th>Приоритет</th>
                 <th>Прогресс</th>
                 <th>Дедлайн</th>
-                <th>Руководитель</th>
                 <th>Действия</th>
             </tr>
         </thead>
@@ -237,13 +236,7 @@
                         <span style="color: var(--text-muted);">—</span>
                     {% endif %}
                 </td>
-                <td>
-                    {% if project.manager %}
-                        {{ project.manager.first_name|default:project.manager.username }}
-                    {% else %}
-                        <span style="color: var(--text-muted);">Не назначен</span>
-                    {% endif %}
-                </td>
+
                 <td>
                     <a href="{% url 'project_gantt' project.id %}" class="gantt-link">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">

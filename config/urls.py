@@ -23,4 +23,5 @@ urlpatterns = [
     path('tasks/', include('task_management.urls')),
     path('resource/', include('resource_planning.urls')),
     path('logout/', auth_views.LogoutView.as_view(next_page='/admin/'), name='logout'),
+    path('accounts/', include('django.contrib.auth.urls')),
 ]

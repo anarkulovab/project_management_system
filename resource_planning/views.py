@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.db.models import Count, Sum, Q, Avg
 from django.utils import timezone
@@ -16,41 +17,45 @@ from django.contrib import messages
 import random
 import string
 
+@login_required
 # Дашборды
 def dashboard(request):
-    # Ключевые метрики
-    total_projects = Project.objects.count()
-    active_projects = Project.objects.filter(status__name='Активен').count()
-    completed_projects = Project.objects.filter(status__name='Завершён').count()
+    # Только проекты текущего руководителя
+    projects = Project.objects.filter(manager=request.user)
 
-    # Просроченные задачи (дедлайн прошёл, задача не завершена)
+    total_projects = projects.count()
+    active_projects = projects.filter(status__name='Активен').count()
+    completed_projects = projects.filter(status__name='Завершён').count()
+
+    # Просроченные задачи только по проектам руководителя
     overdue_tasks = Task.objects.filter(
+        project__manager=request.user,
         planned_end_date__lt=timezone.now()
     ).exclude(status__name='Готово').count()
 
-    # Средняя загрузка команды
-    total_planned = TaskAssignment.objects.aggregate(total=Sum('planned_hours'))['total'] or 0
-    total_actual = TaskAssignment.objects.aggregate(total=Sum('actual_hours'))['total'] or 0
+    # Загрузка — только по задачам проектов руководителя
+    assignments = TaskAssignment.objects.filter(task__project__manager=request.user)
+    total_planned = assignments.aggregate(total=models.Sum('planned_hours'))['total'] or 0
+    total_actual = assignments.aggregate(total=models.Sum('actual_hours'))['total'] or 0
     avg_utilization = round((total_actual / total_planned * 100)) if total_planned > 0 else 0
 
-    # Данные для графика "Прогресс проектов"
-    projects = Project.objects.all()[:5]
-    project_names = [p.name for p in projects]
+    # Данные для графиков
+    project_names = [p.name for p in projects[:5]]
     project_progress = []
-    for p in projects:
+    for p in projects[:5]:
         kpi = KPI.objects.filter(project=p, name='Процент выполнения').first()
         project_progress.append(float(kpi.value) if kpi else 0)
 
-    # Данные для графика "Статусы задач"
-    task_statuses = Task.objects.values('status__name').annotate(count=Count('id'))
+    # Статусы задач — только по проектам руководителя
+    task_statuses = Task.objects.filter(
+        project__manager=request.user
+    ).values('status__name').annotate(count=models.Count('id'))
     status_labels = [ts['status__name'] for ts in task_statuses]
     status_counts = [ts['count'] for ts in task_statuses]
 
     # Таблица проектов
-    project_list = Project.objects.select_related('status', 'priority', 'manager').all()[:10]
-
-    # KPI для отображения
-    kpi_list = KPI.objects.select_related('project').all()[:10]
+    project_list = projects[:10]
+    kpi_list = KPI.objects.filter(project__manager=request.user)[:20]
 
     context = {
         'total_projects': total_projects,
@@ -68,10 +73,12 @@ def dashboard(request):
     return render(request, 'resource_planning/dashboard.html', context)
 
 
-# Список проектов
+@login_required
 def project_list(request):
     status_filter = request.GET.get('status', '')
-    projects = Project.objects.select_related('status', 'priority', 'manager').all()
+
+    # Только проекты текущего руководителя
+    projects = Project.objects.select_related('status', 'priority', 'manager').filter(manager=request.user)
 
     if status_filter:
         projects = projects.filter(status__name=status_filter)
@@ -93,10 +100,7 @@ def project_list(request):
     }
     return render(request, 'resource_planning/project_list.html', context)
 
-def project_gantt(request, project_id):
-    project = Project.objects.get(id=project_id)
-    return render(request, 'resource_planning/project_gantt.html', {'project': project})
-
+@login_required
 # Создание проекта
 def project_create(request):
     if request.method == 'POST':
@@ -112,7 +116,7 @@ def project_create(request):
     else:
         return redirect('project_list')
 
-
+@login_required
 # Диаграмма Ганта
 def project_gantt(request, project_id):
     project = get_object_or_404(Project, id=project_id)
@@ -122,7 +126,7 @@ def project_gantt(request, project_id):
         'users': users,
     })
 
-
+@login_required
 # Задачи проекта
 def project_tasks_api(request, project_id):
     tasks = Task.objects.filter(project_id=project_id).select_related('status', 'assigned_to')
@@ -159,7 +163,7 @@ def get_status_color(status_name):
 # Создание задач
 from datetime import datetime
 
-
+@login_required
 @csrf_exempt
 def task_create_api(request, project_id):
     if request.method != 'POST':
@@ -219,6 +223,7 @@ def task_create_api(request, project_id):
         }
     }, status=201)
 
+@login_required
 def workload(request):
     today = date.today()
     week_start = today - timedelta(days=today.weekday())
@@ -236,7 +241,8 @@ def workload(request):
         selected_project = get_object_or_404(Project, id=project_id)
         users = User.objects.filter(participating_projects=selected_project).distinct()
     else:
-        users = User.objects.filter(is_active=True, is_superuser=False)
+        employees = Employee.objects.filter(manager=request.user).values_list('employee', flat=True)
+        users = User.objects.filter(id__in=employees)
 
     workload_data = []
     total_planned = 0
@@ -306,7 +312,7 @@ def workload(request):
     }
     return render(request, 'resource_planning/workload.html', context)
 
-
+@login_required
 def project_detail(request, project_id):
     project = get_object_or_404(Project, id=project_id)
     tasks = Task.objects.filter(project=project).select_related('status', 'assigned_to', 'author')
@@ -321,7 +327,7 @@ def project_detail(request, project_id):
     }
     return render(request, 'resource_planning/project_detail.html', context)
 
-
+@login_required
 def project_edit(request, project_id):
     project = get_object_or_404(Project, id=project_id)
 
@@ -344,6 +350,7 @@ def project_edit(request, project_id):
     }
     return render(request, 'resource_planning/project_edit.html', context)
 
+@login_required
 def team(request):
     """Страница команды руководителя."""
     employees = Employee.objects.filter(manager=request.user).select_related('employee')
@@ -353,6 +360,7 @@ def team(request):
     return render(request, 'resource_planning/team.html', context)
 
 
+@login_required
 def add_employee(request):
     """Добавление нового сотрудника в команду."""
     if request.method == 'POST':
