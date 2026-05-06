@@ -1,282 +1,203 @@
 {% extends 'resource_planning/base.html' %}
 {% load static %}
 
-{% block title %}Дашборд | Система управления проектами{% endblock %}
-{% block page_title %}Дашборд{% endblock %}
+{% block title %}Главная | Projector{% endblock %}
+{% block page_title %}Главная{% endblock %}
 
 {% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-    <style>
-     /* оставьте только стили, специфичные для дашборда:
-       .kpi-grid, .kpi-card, .charts-grid, .chart-card,
-       .table-card, .badge, .progress-bar */
+    /* ===== KPI-КАРТОЧКИ ===== */
+    .kpi-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 26px;
+        flex-wrap: wrap;
+    }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+    .kpi-card {
+        background: var(--surface);
+        border-radius: 18px;
+        padding: 18px 22px;
+        flex: 1;
+        min-width: 130px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+        transition: transform 0.2s, box-shadow 0.2s;
+        text-align: center;
+    }
 
-        h1 {
-            font-size: 2rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-        }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, .08);
+    }
 
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-            margin-bottom: 2rem;
-        }
+    .kpi-card .label {
+        font-size: 11px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+        margin-bottom: 6px;
+    }
 
-        /* KPI карточки */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.25rem;
-            margin-bottom: 2rem;
-        }
+    .kpi-card .value {
+        font-size: 30px;
+        font-weight: 600;
+        color: var(--text-heading);
+    }
 
-        .kpi-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-light);
-            border-radius: 1.2rem;
-            padding: 1.5rem;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
+    .kpi-card:nth-child(1) .value { color: var(--primary); }
+    .kpi-card:nth-child(2) .value { color: var(--danger); }
+    .kpi-card:nth-child(3) .value { color: var(--warning); }
+    .kpi-card:nth-child(4) .value { color: var(--success); }
 
-        .kpi-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
+    /* ===== ГРАФИКИ ===== */
+    .charts-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 26px;
+    }
 
-        .kpi-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.5rem;
-        }
+    .chart-box {
+        background: var(--surface);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 190px;
+    }
 
-        .kpi-value {
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
+    .chart-box:first-child { flex: 1.3; }
+    .chart-box:last-child  { flex: 0.7; }
 
-        .kpi-accent { color: var(--accent-core); }
-        .kpi-success { color: var(--success); }
-        .kpi-warning { color: var(--warning); }
-        .kpi-danger { color: var(--danger); }
+    .chart-box h3 {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-heading);
+        margin-bottom: 12px;
+    }
 
-        /* Графики */
-        .charts-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 1.25rem;
-            margin-bottom: 2rem;
-        }
+    canvas {
+        max-height: 250px;
+    }
 
-        .chart-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-light);
-            border-radius: 1.2rem;
-            padding: 1.5rem;
-        }
+    /* ===== ТАБЛИЦА ПРОЕКТОВ ===== */
+    .section-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-heading);
+        margin-bottom: 14px;
+    }
 
-        .chart-card h3 {
-            font-size: 1rem;
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-        }
-
-        canvas { max-height: 300px; }
-
-        /* Таблица */
-        .table-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-light);
-            border-radius: 1.2rem;
-            padding: 1.5rem;
-            overflow-x: auto;
-        }
-
-        .table-card h3 {
-            font-size: 1rem;
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-
-        th {
-            text-align: left;
-            color: var(--text-secondary);
-            font-weight: 500;
-            padding: 0.75rem 0.5rem;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        td {
-            padding: 0.75rem 0.5rem;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .badge-active { background: #3498DB20; color: #3498DB; }
-        .badge-completed { background: #27AE6020; color: #27AE60; }
-        .badge-paused { background: #F39C1220; color: #F39C12; }
-        .badge-cancelled { background: #E74C3C20; color: #E74C3C; }
-
-        .progress-bar {
-            height: 6px;
-            background: var(--border-light);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            border-radius: 10px;
-            background: var(--accent-core);
-            transition: width 0.3s;
-        }
-
-        @media (max-width: 768px) {
-            .charts-grid { grid-template-columns: 1fr; }
-            body { padding: 1rem; }
-        }
-    </style>
-
+    /* ===== АДАПТИВ ===== */
+    @media (max-width: 750px) {
+        .charts-row { flex-direction: column; }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div>
-    <h1 style="font-size: 1.8rem; font-weight: 600; margin-bottom: 0.3rem;">📊 Панель руководителя</h1>
-    <p style="color: var(--text-secondary); margin-bottom: 2rem;">Обзор проектов · KPI · Загрузка команды</p>
 
-    <!-- KPI-карточки, графики, таблица — оставьте как было -->
-    <div class="container">
+<h1 class="page-title">Панель мониторинга</h1>
+<p class="page-subtitle">Обзор проектов &middot; KPI &middot; Загрузка команды</p>
 
-    <!-- KPI карточки -->
-    <div class="kpi-grid">
-        <div class="kpi-card">
-            <div class="kpi-label">Всего проектов</div>
-            <div class="kpi-value kpi-accent">{{ total_projects }}</div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">
-                🟢 {{ active_projects }} активно · ✅ {{ completed_projects }} завершено
-            </div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Просроченные задачи</div>
-            <div class="kpi-value {% if overdue_tasks > 0 %}kpi-danger{% else %}kpi-success{% endif %}">
-                {{ overdue_tasks }}
-            </div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">
-                {% if overdue_tasks == 0 %}✅ Всё в срок{% else %}🔴 Требуют внимания{% endif %}
-            </div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Средняя загрузка команды</div>
-            <div class="kpi-value {% if avg_utilization > 90 %}kpi-danger{% elif avg_utilization > 70 %}kpi-warning{% else %}kpi-success{% endif %}">
-                {{ avg_utilization }}%
-            </div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">
-                Факт / План часов
-            </div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">KPI выполнения</div>
-            <div class="kpi-value kpi-accent">
-                {{ project_progress|length }}
-            </div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">
-                Проектов с KPI
-            </div>
-        </div>
+<!-- ===== KPI-карточки ===== -->
+<div class="kpi-row">
+    <div class="kpi-card">
+        <div class="label">Активных проектов</div>
+        <div class="value">{{ active_projects }}</div>
     </div>
-
-    <!-- Графики -->
-    <div class="charts-grid">
-        <div class="chart-card">
-            <h3>📈 Прогресс проектов (%)</h3>
-            <canvas id="progressChart"></canvas>
-        </div>
-        <div class="chart-card">
-            <h3>📋 Задачи по статусам</h3>
-            <canvas id="statusChart"></canvas>
-        </div>
+    <div class="kpi-card">
+        <div class="label">Просрочено задач</div>
+        <div class="value">{{ overdue_tasks }}</div>
     </div>
-
-    <!-- Таблица проектов -->
-    <div class="table-card">
-        <h3>🗂️ Проекты</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Название</th>
-                    <th>Статус</th>
-                    <th>Прогресс</th>
-                    <th>Дедлайн</th>
-                    <th>Руководитель</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for project in project_list %}
-                <tr>
-                    <td>{{ project.name }}</td>
-                    <td>
-                        {% if project.status.name == 'Активен' %}
-                            <span class="badge badge-active">{{ project.status.name }}</span>
-                        {% elif project.status.name == 'Завершён' %}
-                            <span class="badge badge-completed">{{ project.status.name }}</span>
-                        {% elif project.status.name == 'Приостановлен' %}
-                            <span class="badge badge-paused">{{ project.status.name }}</span>
-                        {% else %}
-                            <span class="badge badge-cancelled">{{ project.status.name }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <div class="progress-bar" style="flex: 1;">
-                                <div class="progress-fill" style="width: {% for kpi in kpi_list %}{% if kpi.project_id == project.id and kpi.name == 'Процент выполнения' %}{{ kpi.value|floatformat:0 }}{% endif %}{% endfor %}%;"></div>
-                            </div>
-                            <span style="font-size: 0.8rem; color: var(--text-secondary);">
-                                {% for kpi in kpi_list %}
-                                    {% if kpi.project_id == project.id and kpi.name == 'Процент выполнения' %}
-                                        {{ kpi.value|floatformat:0 }}%
-                                    {% endif %}
-                                {% endfor %}
-                            </span>
-                        </div>
-                    </td>
-                    <td>{{ project.end_date_plan|date:"d.m.Y" }}</td>
-                    <td>
-                        {% if project.manager %}
-                        {{ project.manager.first_name|default:project.manager.username }}
-                        {% else %}
-                        <span style="color: var(--text-muted);">Не назначен</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-muted);">Нет проектов</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="kpi-card">
+        <div class="label">Загрузка команды</div>
+        <div class="value">{{ avg_utilization }}%</div>
+    </div>
+    <div class="kpi-card">
+        <div class="label">Завершено проектов</div>
+        <div class="value">{{ completed_projects }}</div>
     </div>
 </div>
+
+<!-- ===== Графики ===== -->
+<div class="charts-row">
+    <div class="chart-box">
+        <h3>Прогресс проектов</h3>
+        <canvas id="progressChart"></canvas>
+    </div>
+    <div class="chart-box">
+        <h3>Статусы задач</h3>
+        <canvas id="statusChart"></canvas>
+    </div>
+</div>
+
+<!-- ===== Таблица проектов ===== -->
+<h3 class="section-title">Активные проекты</h3>
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Проект</th>
+                <th>Статус</th>
+                <th>Прогресс</th>
+                <th>Дедлайн</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for project in project_list %}
+            <tr>
+                <td style="font-weight: 500;">{{ project.name }}</td>
+                <td>
+                    {% if project.status.name == 'Активен' %}
+                        <span class="badge badge-active">{{ project.status.name }}</span>
+                    {% elif project.status.name == 'Завершён' %}
+                        <span class="badge badge-completed">{{ project.status.name }}</span>
+                    {% elif project.status.name == 'Приостановлен' %}
+                        <span class="badge badge-paused">{{ project.status.name }}</span>
+                    {% elif project.status.name == 'Отменён' %}
+                        <span class="badge badge-cancelled">{{ project.status.name }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="progress-cell">
+                        <div class="progress-bar">
+                            {% for kpi in kpi_list %}
+                                {% if kpi.project_id == project.id and kpi.name == 'Процент выполнения' %}
+                                    <div class="progress-fill
+                                        {% if kpi.value < 30 %}progress-low
+                                        {% elif kpi.value < 70 %}progress-mid
+                                        {% else %}progress-high{% endif %}"
+                                        style="width: {{ kpi.value|floatformat:0 }}%;">
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <span>
+                            {% for kpi in kpi_list %}
+                                {% if kpi.project_id == project.id and kpi.name == 'Процент выполнения' %}
+                                    {{ kpi.value|floatformat:0 }}%
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                    </div>
+                </td>
+                <td>{{ project.end_date_plan|date:"d.m.Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                    Нет активных проектов
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 {% endblock %}
@@ -292,19 +213,17 @@
             datasets: [{
                 label: 'Выполнение (%)',
                 data: {{ project_progress|safe }},
-                backgroundColor: ['#3498DB', '#27AE60', '#F39C12', '#E74C3C', '#1ABC9C'],
+                backgroundColor: ['#7494ec', '#6dbf8b', '#f0b065', '#e0857b', '#7ec8c3'],
                 borderRadius: 6,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
+            plugins: { legend: { display: false } },
             scales: {
-                y: { beginAtZero: true, max: 100, ticks: { color: '#9AA4B0' }, grid: { color: '#2C3E5020' } },
-                x: { ticks: { color: '#9AA4B0', maxRotation: 30 }, grid: { display: false } }
+                y: { beginAtZero: true, max: 100, ticks: { color: '#888888' }, grid: { color: '#e8e8f0' } },
+                x: { ticks: { color: '#888888', maxRotation: 30 }, grid: { display: false } }
             }
         }
     });
@@ -317,8 +236,8 @@
             labels: {{ status_labels|safe }},
             datasets: [{
                 data: {{ status_counts|safe }},
-                backgroundColor: ['#3498DB', '#F39C12', '#27AE60', '#E74C3C', '#1ABC9C'],
-                borderColor: '#141B22',
+                backgroundColor: ['#7494ec', '#f0b065', '#6dbf8b', '#e0857b', '#7ec8c3'],
+                borderColor: '#ffffff',
                 borderWidth: 2,
             }]
         },
@@ -328,7 +247,7 @@
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { color: '#9AA4B0', padding: 15 }
+                    labels: { color: '#888888', padding: 15, font: { size: 11 } }
                 }
             }
         }

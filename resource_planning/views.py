@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
-from .models import Project, TaskAssignment, KPI, ProjectStatus, UserAbsence
+from .models import Project, TaskAssignment, KPI, ProjectStatus, UserAbsence, Priority
 from task_management.models import Task, TaskStatus
 from .forms import ProjectForm
 import json
@@ -67,18 +67,16 @@ def dashboard(request):
 
 # Список проектов
 def project_list(request):
-    # Получаем параметр фильтра из URL (?status=Активен)
     status_filter = request.GET.get('status', '')
-
     projects = Project.objects.select_related('status', 'priority', 'manager').all()
 
     if status_filter:
         projects = projects.filter(status__name=status_filter)
 
-    # Получаем все статусы для выпадающего списка фильтра
     statuses = ProjectStatus.objects.all()
+    priorities = Priority.objects.all()
+    users = User.objects.filter(is_active=True, is_superuser=False)
 
-    # Подтягиваем KPI "Процент выполнения" для каждого проекта
     for project in projects:
         kpi = project.kpis.filter(name='Процент выполнения').first()
         project.progress = int(kpi.value) if kpi else 0
@@ -86,6 +84,8 @@ def project_list(request):
     context = {
         'projects': projects,
         'statuses': statuses,
+        'priorities': priorities,
+        'users': users,
         'current_filter': status_filter,
     }
     return render(request, 'resource_planning/project_list.html', context)
@@ -100,17 +100,14 @@ def project_create(request):
         form = ProjectForm(request.POST)
         if form.is_valid():
             project = form.save(commit=False)
-            # Устанавливаем статус "Активен" по умолчанию
             default_status = ProjectStatus.objects.get(name='Активен')
             project.status = default_status
-            # Назначаем текущего пользователя руководителем
             project.manager = request.user
             project.save()
-            return redirect('project_list')
+            form.save_m2m()  # сохраняет связи ManyToMany (participants)
+            return redirect('project_detail', project_id=project.id)
     else:
-        form = ProjectForm()
-
-    return render(request, 'resource_planning/project_create.html', {'form': form})
+        return redirect('project_list')
 
 
 # Диаграмма Ганта
@@ -305,3 +302,41 @@ def workload(request):
         'avg_load': avg_load,
     }
     return render(request, 'resource_planning/workload.html', context)
+
+
+def project_detail(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    tasks = Task.objects.filter(project=project).select_related('status', 'assigned_to', 'author')
+    participants = project.participants.all()
+    kpis = KPI.objects.filter(project=project)
+
+    context = {
+        'project': project,
+        'tasks': tasks,
+        'participants': participants,
+        'kpis': kpis,
+    }
+    return render(request, 'resource_planning/project_detail.html', context)
+
+
+def project_edit(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+
+    if request.method == 'POST':
+        form = ProjectForm(request.POST, instance=project)
+        if form.is_valid():
+            form.save()
+            return redirect('project_detail', project_id=project.id)
+    else:
+        form = ProjectForm(instance=project)
+
+    priorities = Priority.objects.all()
+    users = User.objects.filter(is_active=True, is_superuser=False)
+
+    context = {
+        'form': form,
+        'project': project,
+        'priorities': priorities,
+        'users': users,
+    }
+    return render(request, 'resource_planning/project_edit.html', context)

@@ -1,184 +1,249 @@
 {% extends 'resource_planning/base.html' %}
 {% load static %}
 
-{% block title %}Загрузка команды | Система управления проектами{% endblock %}
-{% block page_title %}Загрузка команды{% endblock %}
+{% block title %}Команда | Projector{% endblock %}
+{% block page_title %}Команда{% endblock %}
 
 {% block extra_head %}
 <style>
+    /* ===== СВОДНЫЕ КАРТОЧКИ ===== */
     .summary-cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 15px;
+        margin-bottom: 24px;
     }
 
-    .summary-card {
-        background: var(--bg-surface);
-        border: 1px solid var(--border-light);
-        border-radius: 1rem;
-        padding: 1.2rem;
+    .sum-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px 22px;
+        box-shadow: var(--shadow);
     }
 
-    .summary-label {
-        font-size: 0.8rem;
+    .sum-card .label {
+        font-size: 11px;
         color: var(--text-secondary);
         text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+        margin-bottom: 4px;
     }
 
-    .summary-value {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin-top: 0.3rem;
+    .sum-card .value {
+        font-size: 26px;
+        font-weight: 600;
+        color: var(--text-heading);
     }
 
+    .sum-card:first-child .value { color: var(--primary); }
+    .sum-card:last-child .value  { color: var(--success); }
+
+    /* ===== НАВИГАЦИЯ ПО НЕДЕЛЯМ ===== */
     .week-nav {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 1rem;
+        gap: 4px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 4px 10px;
+        font-size: 12px;
+        color: var(--primary);
     }
 
     .week-nav a {
-        color: var(--accent-core);
+        display: flex;
+        align-items: center;
+        color: var(--primary);
         text-decoration: none;
-        font-size: 1.2rem;
-        padding: 0.3rem 0.6rem;
+        padding: 2px;
     }
 
-    .week-nav span {
-        color: var(--text-primary);
-        font-weight: 500;
+    .week-nav a:hover {
+        color: var(--primary-hover);
     }
 
-    .table-card {
-        background: var(--bg-surface);
-        border: 1px solid var(--border-light);
-        border-radius: 1.2rem;
-        overflow: hidden;
+    .week-nav svg {
+        width: 14px;
+        height: 14px;
     }
 
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-
-    th {
-        text-align: left;
-        color: var(--text-secondary);
-        font-weight: 500;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        padding: 1rem;
-        background: #0F161E;
-        border-bottom: 1px solid var(--border-light);
+    .page-subtitle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
     }
 
-    td {
-        padding: 0.9rem 1rem;
-        border-bottom: 1px solid var(--border-light);
-    }
-
+    /* ===== ИНДИКАТОР ЗАГРУЗКИ ===== */
     .load-indicator {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 6px;
     }
 
     .load-dot {
-        width: 10px; height: 10px;
+        display: inline-block;
+        width: 9px;
+        height: 9px;
         border-radius: 50%;
+        flex-shrink: 0;
     }
 
-    .load-success .load-dot { background: var(--success); }
-    .load-warning .load-dot { background: var(--warning); }
-    .load-danger .load-dot { background: var(--danger); }
+    .load-dot.green  { background: var(--success); }
+    .load-dot.yellow { background: var(--warning); }
+    .load-dot.red    { background: var(--danger); }
 
-    .progress-bar {
+    .load-bar-bg {
+        display: inline-block;
+        width: 80px;
         height: 6px;
-        background: var(--border-light);
+        background: #e8e8f0;
         border-radius: 10px;
-        width: 100px;
+        vertical-align: middle;
+        margin-left: 6px;
+        overflow: hidden;
     }
 
-    .progress-fill { height: 100%; border-radius: 10px; }
-    .progress-success { background: var(--success); }
-    .progress-warning { background: var(--warning); }
-    .progress-danger { background: var(--danger); }
+    .load-bar-fill {
+        height: 6px;
+        border-radius: 10px;
+    }
 
-    .empty-state {
-        text-align: center;
-        padding: 3rem;
-        color: var(--text-muted);
+    .load-bar-fill.green  { background: var(--success); }
+    .load-bar-fill.yellow { background: var(--warning); }
+    .load-bar-fill.red    { background: var(--danger); }
+
+    /* ===== АВАТАР ===== */
+    .avatar {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .avatar-circle {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--primary-light);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .avatar-circle.warning-bg {
+        background: #fef5ee;
+        color: var(--warning);
+    }
+
+    .avatar-circle.success-bg {
+        background: #e8f8f2;
+        color: var(--success);
+    }
+
+    @media (max-width: 750px) {
+        .summary-cards {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
-    <div>
-        <h1 style="font-size: 1.8rem; font-weight: 600; color: var(--text-primary);">👥 Загрузка команды</h1>
-        <p style="color: var(--text-secondary); font-size: 0.9rem;">
-            {{ week_start|date:"d.m.Y" }} – {{ week_end|date:"d.m.Y" }}
-        </p>
-    </div>
-    <div class="week-nav">
-        <a href="?week_offset={{ offset|add:-1 }}">←</a>
+
+<h1 class="page-title">Загрузка команды</h1>
+<p class="page-subtitle">
+    <span>{{ week_start|date:"d.m.Y" }} – {{ week_end|date:"d.m.Y" }}</span>
+    <span class="week-nav">
+        <a href="?week_offset={{ offset|add:-1 }}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+        </a>
         <span>Неделя</span>
-        <a href="?week_offset={{ offset|add:1 }}">→</a>
-    </div>
-</div>
+        <a href="?week_offset={{ offset|add:1 }}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 6 15 12 9 18"/>
+            </svg>
+        </a>
+    </span>
+</p>
 
+<!-- ===== Сводные карточки ===== -->
 <div class="summary-cards">
-    <div class="summary-card">
-        <div class="summary-label">Сотрудников</div>
-        <div class="summary-value">{{ workload_data|length }}</div>
+    <div class="sum-card">
+        <div class="label">Сотрудников</div>
+        <div class="value">{{ workload_data|length }}</div>
     </div>
-    <div class="summary-card">
-        <div class="summary-label">Средняя загрузка</div>
-        <div class="summary-value">{{ avg_load }}%</div>
+    <div class="sum-card">
+        <div class="label">Средняя загрузка</div>
+        <div class="value">{{ avg_load }}%</div>
     </div>
 </div>
 
-<div class="table-card">
+<!-- ===== Таблица загрузки ===== -->
+<div class="table-wrapper">
     <table>
         <thead>
             <tr>
                 <th>Сотрудник</th>
-                <th>Плановые часы</th>
-                <th>Факт. часы</th>
-                <th>Доступный фонд</th>
+                <th>План, ч</th>
+                <th>Факт, ч</th>
+                <th>Доступно, ч</th>
                 <th>Загрузка</th>
             </tr>
         </thead>
         <tbody>
             {% for row in workload_data %}
             <tr>
-                <td style="font-weight: 500;">{{ row.user.get_full_name|default:row.user.username }}</td>
+                <td>
+                    <div class="avatar">
+                        <div class="avatar-circle
+                            {% if row.load_class == 'warning' %}warning-bg
+                            {% elif row.load_class == 'success' %}success-bg{% endif %}">
+                            {{ row.user.first_name|slice:":1"|upper|default:row.user.username|slice:":1"|upper }}
+                        </div>
+                        {{ row.user.get_full_name|default:row.user.username }}
+                    </div>
+                </td>
                 <td>{{ row.planned }} ч</td>
                 <td>{{ row.actual }} ч</td>
                 <td>{{ row.available }} ч</td>
                 <td>
-                    <div class="load-indicator 
-                        {% if row.load_class == 'success' %}load-success
-                        {% elif row.load_class == 'warning' %}load-warning
-                        {% else %}load-danger{% endif %}">
-                        <span class="load-dot"></span>
+                    <div class="load-indicator">
+                        <span class="load-dot
+                            {% if row.load_class == 'success' %}green
+                            {% elif row.load_class == 'warning' %}yellow
+                            {% else %}red{% endif %}">
+                        </span>
                         <span>{{ row.load_percent }}%</span>
-                        <div class="progress-bar">
-                            <div class="progress-fill 
-                                {% if row.load_class == 'success' %}progress-success
-                                {% elif row.load_class == 'warning' %}progress-warning
-                                {% else %}progress-danger{% endif %}"
-                                style="width: {% if row.load_percent > 100 %}100{% else %}{{ row.load_percent }}{% endif %}%">
-                            </div>
-                        </div>
+                        <span class="load-bar-bg">
+                            <span class="load-bar-fill
+                                {% if row.load_class == 'success' %}green
+                                {% elif row.load_class == 'warning' %}yellow
+                                {% else %}red{% endif %}"
+                                style="width: {% if row.load_percent > 100 %}100{% else %}{{ row.load_percent }}{% endif %}%;">
+                            </span>
+                        </span>
                     </div>
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5"><div class="empty-state">Нет данных о загрузке</div></td>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 20px;">
+                    <p style="font-size: 15px; font-weight: 500; margin-bottom: 6px;">Нет данных о загрузке</p>
+                    <p style="font-size: 13px;">Назначьте задачи сотрудникам, чтобы увидеть статистику</p>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
 {% endblock %}

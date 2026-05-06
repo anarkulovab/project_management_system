@@ -1,0 +1,114 @@
+{% extends 'resource_planning/base.html' %}
+{% load static %}
+
+{% block title %}Редактирование: {{ project.name }} | Projector{% endblock %}
+{% block page_title %}Редактирование проекта{% endblock %}
+
+{% block extra_head %}
+<style>
+    .form-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 30px;
+        width: 100%;
+        box-shadow: var(--shadow);
+    }
+
+    .form-card h2 {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-heading);
+        margin-bottom: 6px;
+    }
+
+    .form-card .subtitle {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+    }
+
+    .checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        background: var(--primary-light);
+        border-radius: 20px;
+        font-size: 12px;
+        color: var(--text-main);
+        cursor: pointer;
+    }
+
+    .checkbox-group label:hover {
+        background: #dce3fa;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="form-card">
+    <h2>Редактирование: {{ project.name }}</h2>
+    <p class="subtitle">Измените параметры проекта и состав участников</p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+            {{ form.name }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+            {{ form.description }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.start_date_plan.id_for_label }}">{{ form.start_date_plan.label }}</label>
+            {{ form.start_date_plan }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.end_date_plan.id_for_label }}">{{ form.end_date_plan.label }}</label>
+            {{ form.end_date_plan }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.priority.id_for_label }}">{{ form.priority.label }}</label>
+            {{ form.priority }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Участники проекта</label>
+            <div class="checkbox-group">
+                {% for user in users %}
+                    <label>
+                        <input type="checkbox" name="participants" value="{{ user.id }}">
+                        {{ user.get_full_name|default:user.username }}
+                    </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'project_detail' project.id %}" class="btn btn-outline">Отмена</a>
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

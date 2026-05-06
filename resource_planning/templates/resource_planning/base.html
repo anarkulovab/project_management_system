@@ -4,146 +4,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Система управления проектами{% endblock %}</title>
+    <title>{% block title %}Projector — Управление проектами{% endblock %}</title>
+    <!-- Chart.js (для дашборда) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
     <style>
+        /* ============================================================
+           Единый файл стилей — светлая тема
+           ============================================================ */
+
+        /* ---------- ПЕРЕМЕННЫЕ ---------- */
         :root {
-            --bg-deep: #0A0F14;
-            --bg-surface: #141B22;
-            --primary-base: #2C3E50;
-            --accent-core: #3498DB;
-            --role-leader: #3498DB;
-            --success: #27AE60;
-            --warning: #F39C12;
-            --danger: #E74C3C;
-            --info: #1ABC9C;
-            --text-primary: #FFFFFF;
-            --text-main: #E0E4E8;
-            --text-secondary: #9AA4B0;
-            --text-muted: #7F8C8D;
-            --border-light: #25323E;
+            --bg-start: #e2e2e2;
+            --bg-end: #c9d6ff;
+            --surface: #ffffff;
+            --primary: #7494ec;
+            --primary-hover: #5a7de0;
+            --primary-light: #f0f3ff;
+            --border: #e8e8f0;
+            --shadow: 0 4px 18px rgba(0, 0, 0, .05);
+
+            --success: #6dbf8b;
+            --warning: #f0b065;
+            --danger: #e0857b;
+            --info: #7ec8c3;
+
+            --text-heading: #1a1a1a;
+            --text-main: #333333;
+            --text-secondary: #888888;
+            --text-muted: #999999;
+
             --sidebar-width: 250px;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            background-color: var(--bg-deep);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: var(--text-main);
-            display: flex;
-            min-height: 100vh;
+        /* ---------- СБРОС И БАЗА ---------- */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        /* Боковое меню */
+        body {
+            display: flex;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+            color: var(--text-main);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        a { text-decoration: none; color: inherit; }
+        ul, ol { list-style: none; }
+
+        /* ---------- БОКОВОЕ МЕНЮ ---------- */
         .sidebar {
             width: var(--sidebar-width);
-            background: var(--bg-surface);
-            border-right: 1px solid var(--border-light);
-            padding: 1.5rem 1rem;
-            position: fixed;
-            top: 0; left: 0; bottom: 0;
-            overflow-y: auto;
-            z-index: 100;
+            background: var(--surface);
+            padding: 28px 20px;
+            min-height: 100vh;
+            border-right: 1px solid var(--border);
+            box-shadow: 2px 0 20px rgba(0, 0, 0, .05);
             display: flex;
             flex-direction: column;
+            gap: 2px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 100;
+            overflow-y: auto;
         }
 
         .sidebar-logo {
+            color: var(--primary);
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 2rem;
-            padding: 0 0.5rem;
-            text-decoration: none;
+            gap: 8px;
+            letter-spacing: -0.2px;
         }
 
-        .sidebar-logo .logo-icon {
-            color: var(--accent-core);
-        }
-
-        .sidebar-logo span {
-            color: var(--accent-core);
-        }
-
-        .sidebar-section {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            letter-spacing: 1px;
-            margin: 1.5rem 0 0.5rem 0;
-            padding: 0 0.5rem;
+        .sidebar-logo svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
         }
 
         .sidebar-nav {
-            list-style: none;
             flex: 1;
-        }
-
-        .sidebar-nav li {
-            margin-bottom: 0.15rem;
+            display: flex;
+            flex-direction: column;
         }
 
         .sidebar-nav a {
             display: flex;
             align-items: center;
-            gap: 0.7rem;
-            padding: 0.6rem 0.75rem;
+            gap: 10px;
             color: var(--text-secondary);
-            text-decoration: none;
-            border-radius: 0.5rem;
-            font-size: 0.95rem;
-            transition: all 0.15s;
+            padding: 9px 12px;
+            font-size: 16px;
+            font-weight: 450;
+            border-radius: 10px;
+            transition: all 0.2s;
         }
 
         .sidebar-nav a:hover {
-            background: #1A2530;
-            color: var(--text-primary);
+            background: var(--primary-light);
+            color: var(--primary);
         }
 
         .sidebar-nav a.active {
-            background: var(--accent-core);
-            color: white;
+            background: var(--primary);
+            color: #ffffff;
         }
 
         .sidebar-nav .nav-icon {
             width: 18px;
             height: 18px;
+            color: #bbbbbb;
             flex-shrink: 0;
-            opacity: 0.7;
         }
 
         .sidebar-nav a:hover .nav-icon,
         .sidebar-nav a.active .nav-icon {
-            opacity: 1;
+            color: inherit;
         }
 
         .sidebar-divider {
-            border-top: 1px solid var(--border-light);
-            margin: 0.5rem 0;
+            border-top: 1px solid var(--border);
+            margin: 10px 0 6px;
         }
 
         .sidebar-footer {
             margin-top: auto;
-            padding-top: 0.5rem;
         }
 
-        /* Основной контент */
+        /* ---------- ОСНОВНОЙ КОНТЕНТ ---------- */
         .main-content {
             margin-left: var(--sidebar-width);
             flex: 1;
             display: flex;
             flex-direction: column;
+            min-height: 100vh;
         }
 
-        /* Шапка */
+        /* ---------- ШАПКА ---------- */
         .header {
-            background: var(--bg-surface);
-            border-bottom: 1px solid var(--border-light);
-            padding: 1rem 2rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -153,152 +163,367 @@
         }
 
         .header-breadcrumb {
-            font-size: 0.85rem;
+            font-size: 14px;
             color: var(--text-secondary);
         }
 
         .header-breadcrumb span {
-            color: var(--text-primary);
+            color: var(--text-heading);
             font-weight: 500;
         }
 
         .user-badge {
             display: flex;
             align-items: center;
-            gap: 0.6rem;
-            padding: 0.4rem 1rem;
-            background: #1A2530;
-            border-radius: 2rem;
-            font-size: 0.85rem;
+            gap: 10px;
+            padding: 6px 16px;
+            background: var(--primary-light);
+            border-radius: 30px;
+            font-size: 13px;
             color: var(--text-main);
         }
 
         .user-avatar {
-            width: 32px; height: 32px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
-            background: var(--accent-core);
+            background: var(--primary);
+            color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            font-size: 0.85rem;
-            color: white;
+            font-size: 13px;
         }
 
-        .role-tag {
-            font-size: 0.7rem;
-            color: var(--accent-core);
+        .user-role {
+            font-size: 11px;
+            color: var(--primary);
             font-weight: 500;
         }
 
-        /* Контент страницы */
+        /* ---------- ОБЛАСТЬ КОНТЕНТА ---------- */
         .page-content {
-            padding: 2rem;
+            padding: 30px 35px;
             flex: 1;
         }
 
-        @media (max-width: 768px) {
+        /* ---------- ЗАГОЛОВКИ ---------- */
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-heading);
+            margin-bottom: 4px;
+            letter-spacing: -0.3px;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 22px;
+        }
+
+        /* ---------- КНОПКИ ---------- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 22px;
+            border-radius: 24px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-main);
+        }
+
+        .btn-sm {
+            padding: 5px 14px;
+            font-size: 12px;
+            border-radius: 20px;
+        }
+
+        /* ---------- ТАБЛИЦЫ ---------- */
+        .table-wrapper {
+            background: var(--surface);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            text-align: left;
+            color: #aaaaaa;
+            font-weight: 500;
+            padding: 12px 14px;
+            background: #fafbfe;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f5f5f5;
+            color: #555555;
+            vertical-align: middle;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafbfe; }
+
+        /* ---------- БЕЙДЖИ ---------- */
+        .badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-active {
+            background: #eef3ff;
+            color: var(--primary);
+        }
+
+        .badge-completed {
+            background: #e8f8f2;
+            color: var(--success);
+        }
+
+        .badge-paused {
+            background: #fef5ee;
+            color: var(--warning);
+        }
+
+        .badge-cancelled {
+            background: #fde9e7;
+            color: var(--danger);
+        }
+
+        /* ---------- ПРИОРИТЕТЫ ---------- */
+        .prio-high { color: #e0857b; font-weight: 600; }
+        .prio-medium { color: #f0b065; font-weight: 600; }
+        .prio-low { color: #6dbf8b; font-weight: 600; }
+        .prio-critical { color: #e0857b; font-weight: 700; }
+
+        /* ---------- ПРОГРЕСС-БАР ---------- */
+        .progress-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e8e8f0;
+            border-radius: 10px;
+            flex: 1;
+            min-width: 55px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .progress-low { background: var(--danger); }
+        .progress-mid { background: var(--warning); }
+        .progress-high { background: var(--success); }
+        .progress-blue { background: var(--primary); }
+
+        /* ---------- КАРТОЧКИ ---------- */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px 24px;
+            box-shadow: var(--shadow);
+        }
+
+        /* ---------- ФОРМЫ ---------- */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 13px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+        }
+
+        /* ---------- АДАПТИВ ---------- */
+        @media (max-width: 750px) {
+            body { flex-direction: column; }
+
             .sidebar {
-                display: none;
+                position: relative;
+                width: 100%;
+                min-height: auto;
+                flex-direction: row;
+                flex-wrap: wrap;
+                padding: 14px 16px;
+                gap: 8px;
+                z-index: 10;
             }
-            .main-content {
-                margin-left: 0;
-            }
+
+            .sidebar-logo { margin-bottom: 0; margin-right: 16px; font-size: 17px; }
+            .main-content { margin-left: 0; }
+            .page-content { padding: 18px 16px; }
         }
     </style>
+
     {% block extra_head %}{% endblock %}
 </head>
 <body>
 
-    <!-- Боковое меню -->
+    <!-- ======================== БОКОВОЕ МЕНЮ ======================== -->
     <aside class="sidebar">
         <!-- Логотип -->
         <a href="{% url 'dashboard' %}" class="sidebar-logo">
-            <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="2" y="2" width="20" height="20" rx="4"/>
                 <circle cx="12" cy="12" r="3"/>
             </svg>
-            <span>Projector</span>
+            Projector
         </a>
 
         <!-- Навигация -->
-        <ul class="sidebar-nav">
-            <li>
-                <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                    <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 2048 2048">
-                        <path fill="currentColor" d="M512 896h384v1152H512zm128 1024h128v-896H640zm384-768h384v896h-384zm128 768h128v-640h-128zM0 1408h384v640H0zm128 512h128v-384H128zM1536 640h384v1408h-384zm128 1280h128V768h-128zM1389 621q19 41 19 83q0 40-15 75t-41 61t-61 41t-75 15t-75-15t-61-41t-41-61t-15-75v-12q0-6 1-12l-188-94q-26 26-61 40t-72 14q-42 0-83-19L365 877q19 41 19 83q0 40-15 75t-41 61t-61 41t-75 15t-75-15t-61-41t-41-61t-15-75t15-75t41-61t61-41t75-15q42 0 83 19l256-256q-19-41-19-83q0-40 15-75t41-61t61-41t75-15t75 15t61 41t41 61t15 75v12q0 6-1 12l188 94q26-26 61-40t72-14q42 0 83 19l256-256q-19-41-19-83q0-40 15-75t41-61t61-41t75-15t75 15t61 41t41 61t15 75t-15 75t-41 61t-61 41t-75 15q-42 0-83-19zM192 1024q26 0 45-19t19-45t-19-45t-45-19t-45 19t-19 45t19 45t45 19m1536-896q-26 0-45 19t-19 45t19 45t45 19t45-19t19-45t-19-45t-45-19M704 512q26 0 45-19t19-45t-19-45t-45-19t-45 19t-19 45t19 45t45 19m512 256q26 0 45-19t19-45t-19-45t-45-19t-45 19t-19 45t19 45t45 19"/>
-                    </svg>
-                    Главная
-                </a>
-            </li>
-            <li>
-                <a href="{% url 'project_list' %}" class="{% if 'project' in request.resolver_match.url_name %}active{% endif %}">
-                    <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-                        <path fill="currentColor" fill-rule="evenodd" d="m9.5 14.5l-6-2.5V4l6-2.5zm-6.885-1.244A1 1 0 0 1 2 12.333V3.667a1 1 0 0 1 .615-.923L8.923.115A1.5 1.5 0 0 1 11 1.5V2h1.25c.966 0 1.75.783 1.75 1.75v8.5A1.75 1.75 0 0 1 12.25 14H11v.5a1.5 1.5 0 0 1-2.077 1.385zM11 12.5h1.25a.25.25 0 0 0 .25-.25v-8.5a.25.25 0 0 0-.25-.25H11z" clip-rule="evenodd"/>
-                    </svg>
-                    Проекты
-                </a>
-            </li>
-            <li>
-                <a href="{% url 'workload' %}" class="{% if request.resolver_match.url_name == 'workload' %}active{% endif %}">
-                    <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20">
-                        <path fill="currentColor" d="M8.5 4.5a1.5 1.5 0 1 1 3 0a1.5 1.5 0 0 1-3 0M10 2a2.5 2.5 0 1 0 0 5a2.5 2.5 0 0 0 0-5m4.5 3a1 1 0 1 1 2 0a1 1 0 0 1-2 0m1-2a2 2 0 1 0 0 4a2 2 0 0 0 0-4m-11 1a1 1 0 1 0 0 2a1 1 0 0 0 0-2m-2 1a2 2 0 1 1 4 0a2 2 0 0 1-4 0M5 15l.1-.002q.103.509.304.975A3 3 0 0 1 2 13V9.25C2 8.56 2.56 8 3.25 8h2.129a2.24 2.24 0 0 0-.365 1H3.25a.25.25 0 0 0-.25.25V13a2 2 0 0 0 2 2m12-5.5a2.5 2.5 0 0 1 .958 1.542l.042.008v-1.8C18 8.56 17.44 8 16.75 8h-2.129c.196.292.325.633.365 1h1.764a.25.25 0 0 1 .25.25zm-1.5.5h-2a1.5 1.5 0 0 0-1.5 1.5v.5h-.5a1.5 1.5 0 0 0-1.5 1.5V15h2v-.5a.5.5 0 0 1 1 0v.5h3v-.5a.5.5 0 0 1 1 0v.5h2v-1.5a1.5 1.5 0 0 0-1.5-1.5H17v-.5a1.5 1.5 0 0 0-1.5-1.5M7.25 9a.25.25 0 0 0-.25.25V14c0 1.306.835 2.418 2 2.83v.67q0 .195.029.381A4 4 0 0 1 6 14V9.25C6 8.56 6.56 8 7.25 8h5.5c.605 0 1.11.43 1.225 1zM13 12v-.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v.5zm4 4v.5a.5.5 0 0 1-1 0V16h-3v.5a.5.5 0 0 1-1 0V16h-2v1.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V16z"/>
-                    </svg>
-                    Команда
-                </a>
-            </li>
-            <li>
-                <a href="#" onclick="alert('Раздел в разработке')">
-                    <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 14 14">
-                        <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M1.5 2a1 1 0 0 0-1 1v9.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1h-2M.5 5.5h13m-10-5v3m7-3v3M3.5 2h5"/>
-                    </svg>
-                    Календарь
-                </a>
-            </li>
-        </ul>
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 2048 2048">
+                    <path fill="currentColor" d="M512 896h384v1152H512zm128 1024h128v-896H640zm384-768h384v896h-384zm128 768h128v-640h-128zM0 1408h384v640H0zm128 512h128v-384H128zM1536 640h384v1408h-384zm128 1280h128V768h-128zM1389 621q19 41 19 83q0 40-15 75t-41 61t-61 41t-75 15t-75-15t-61-41t-41-61t-15-75v-12q0-6 1-12l-188-94q-26 26-61 40t-72 14q-42 0-83-19L365 877q19 41 19 83q0 40-15 75t-41 61t-61 41t-75 15t-75-15t-61-41t-41-61t-15-75t15-75t41-61t61-41t75-15q42 0 83 19l256-256q-19-41-19-83q0-40 15-75t41-61t61-41t75-15t75 15t61 41t41 61t15 75v12q0 6-1 12l188 94q26-26 61-40t72-14q42 0 83 19l256-256q-19-41-19-83q0-40 15-75t41-61t61-41t75-15t75 15t61 41t41 61t15 75t-15 75t-41 61t-61 41t-75 15q-42 0-83-19zM192 1024q26 0 45-19t19-45t-19-45t-45-19t-45 19t-19 45t19 45t45 19m1536-896q-26 0-45 19t-19 45t19 45t45 19t45-19t19-45t-19-45t-45-19M704 512q26 0 45-19t19-45t-19-45t-45-19t-45 19t-19 45t19 45t45 19m512 256q26 0 45-19t19-45t-19-45t-45-19t-45 19t-19 45t19 45t45 19"/>
+                </svg>
+                Главная
+            </a>
+
+            <a href="{% url 'project_list' %}" class="{% if 'project' in request.resolver_match.url_name %}active{% endif %}">
+                <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+                    <path fill="currentColor" fill-rule="evenodd" d="m9.5 14.5l-6-2.5V4l6-2.5zm-6.885-1.244A1 1 0 0 1 2 12.333V3.667a1 1 0 0 1 .615-.923L8.923.115A1.5 1.5 0 0 1 11 1.5V2h1.25c.966 0 1.75.783 1.75 1.75v8.5A1.75 1.75 0 0 1 12.25 14H11v.5a1.5 1.5 0 0 1-2.077 1.385zM11 12.5h1.25a.25.25 0 0 0 .25-.25v-8.5a.25.25 0 0 0-.25-.25H11z" clip-rule="evenodd"/>
+                </svg>
+                Проекты
+            </a>
+
+            <a href="{% url 'workload' %}" class="{% if request.resolver_match.url_name == 'workload' %}active{% endif %}">
+                <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20">
+                    <path fill="currentColor" d="M8.5 4.5a1.5 1.5 0 1 1 3 0a1.5 1.5 0 0 1-3 0M10 2a2.5 2.5 0 1 0 0 5a2.5 2.5 0 0 0 0-5m4.5 3a1 1 0 1 1 2 0a1 1 0 0 1-2 0m1-2a2 2 0 1 0 0 4a2 2 0 0 0 0-4m-11 1a1 1 0 1 0 0 2a1 1 0 0 0 0-2m-2 1a2 2 0 1 1 4 0a2 2 0 0 1-4 0M5 15l.1-.002q.103.509.304.975A3 3 0 0 1 2 13V9.25C2 8.56 2.56 8 3.25 8h2.129a2.24 2.24 0 0 0-.365 1H3.25a.25.25 0 0 0-.25.25V13a2 2 0 0 0 2 2m12-5.5a2.5 2.5 0 0 1 .958 1.542l.042.008v-1.8C18 8.56 17.44 8 16.75 8h-2.129c.196.292.325.633.365 1h1.764a.25.25 0 0 1 .25.25zm-1.5.5h-2a1.5 1.5 0 0 0-1.5 1.5v.5h-.5a1.5 1.5 0 0 0-1.5 1.5V15h2v-.5a.5.5 0 0 1 1 0v.5h3v-.5a.5.5 0 0 1 1 0v.5h2v-1.5a1.5 1.5 0 0 0-1.5-1.5H17v-.5a1.5 1.5 0 0 0-1.5-1.5M7.25 9a.25.25 0 0 0-.25.25V14c0 1.306.835 2.418 2 2.83v.67q0 .195.029.381A4 4 0 0 1 6 14V9.25C6 8.56 6.56 8 7.25 8h5.5c.605 0 1.11.43 1.225 1zM13 12v-.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v.5zm4 4v.5a.5.5 0 0 1-1 0V16h-3v.5a.5.5 0 0 1-1 0V16h-2v1.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V16z"/>
+                </svg>
+                Команда
+            </a>
+
+            <a href="#">
+                <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 14 14">
+                    <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M1.5 2a1 1 0 0 0-1 1v9.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1h-2M.5 5.5h13m-10-5v3m7-3v3M3.5 2h5"/>
+                </svg>
+                Календарь
+            </a>
+        </nav>
 
         <!-- Разделитель -->
         <div class="sidebar-divider"></div>
 
         <!-- Нижняя часть меню -->
         <div class="sidebar-footer">
-            <ul class="sidebar-nav">
-                <li>
-                    <a href="#">
-                        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                        </svg>
-                        Личный кабинет
-                    </a>
-                </li>
-                <li>
-                    <a href="#">
-                        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                            <polyline points="16 17 21 12 16 7"/>
-                            <line x1="21" y1="12" x2="9" y2="12"/>
-                        </svg>
-                        Выйти
-                    </a>
-                </li>
-            </ul>
+            <nav class="sidebar-nav">
+                <a href="#">
+                    <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    Личный кабинет
+                </a>
+                <a href="#">
+                    <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    Выйти
+                </a>
+            </nav>
         </div>
     </aside>
 
-    <!-- Основной контент -->
+    <!-- ======================== ОСНОВНОЙ КОНТЕНТ ======================== -->
     <div class="main-content">
 
         <!-- Шапка -->
         <header class="header">
             <div class="header-breadcrumb">
-                🏠 <span>{% block page_title %}Панель управления{% endblock %}</span>
+                <span>{% block page_title %}Панель управления{% endblock %}</span>
             </div>
             <div class="user-badge">
                 <div class="user-avatar">РП</div>
                 <div>
                     <div>Руководитель проекта</div>
-                    <div class="role-tag">Менеджер</div>
+                    <div class="user-role">Менеджер</div>
                 </div>
             </div>
         </header>

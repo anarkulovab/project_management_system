@@ -4,6 +4,13 @@ from task_management.models import Task, TaskStatus
 from django.contrib.auth.models import User
 
 class ProjectForm(forms.ModelForm):
+    participants = forms.ModelMultipleChoiceField(
+        queryset=User.objects.filter(is_active=True, is_superuser=False),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label='Участники проекта'
+    )
+
     class Meta:
         model = Project
         fields = [
@@ -12,6 +19,7 @@ class ProjectForm(forms.ModelForm):
             'start_date_plan',
             'end_date_plan',
             'priority',
+            'participants',
         ]
         widgets = {
             'name': forms.TextInput(attrs={
