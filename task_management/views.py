@@ -250,7 +250,7 @@ def task_detail(request, task_id):
         'comments': comments,
         'history': history,
     }
-    return render(request, 'task_management/task_detail_r.html', context)
+    return render(request, 'task_management/task_detail.html', context)
 
 
 from django.shortcuts import redirect
@@ -578,3 +578,33 @@ def change_username(request):
                 messages.success(request, 'Логин успешно изменён.')
                 return redirect('personal-dashboard')
     return redirect('personal-dashboard')
+
+
+@login_required
+def approve_executor_change(request, request_id):
+    req = get_object_or_404(ExecutorChangeRequest, id=request_id)
+    if request.user != req.task.project.manager:
+        return HttpResponseForbidden("Только руководитель может одобрить")
+
+    old_executor = req.task.assigned_to
+    req.is_approved = True
+    req.save()
+    req.task.assigned_to = req.to_user
+    req.task.save()
+
+    # Уведомление новому исполнителю
+    Notification.objects.create(
+        user=req.to_user,
+        task=req.task,
+        message=f'Руководитель назначил вас исполнителем задачи "{req.task.title}".'
+    )
+
+    # Уведомление старому исполнителю
+    Notification.objects.create(
+        user=old_executor,
+        task=req.task,
+        message=f'Руководитель одобрил передачу задачи "{req.task.title}" сотруднику {req.to_user.get_full_name() or req.to_user.username}.'
+    )
+
+    messages.success(request, 'Исполнитель изменён.')
+    return redirect('task-detail', task_id=req.task.id)
