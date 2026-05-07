@@ -194,7 +194,7 @@ def update_task_status(request, task_id):
                 Notification.objects.create(
                     user=task.project.manager,
                     task=task,
-                    message=f'Исполнитель {request.user.get_full_name()} перевёл задачу "{task.title}" в статус "На проверке".'
+                    message=f'{request.user.get_full_name() or request.user.username} перевёл задачу "{task.title}" в статус "На проверке".'
                 )
 
         elif new_status_name == 'готово' and old_status_name == 'на проверке':
@@ -202,7 +202,7 @@ def update_task_status(request, task_id):
                 Notification.objects.create(
                     user=task.assigned_to,
                     task=task,
-                    message=f'Руководитель принял задачу "{task.title}". Статус: Готово ✅'
+                    message=f'Руководитель принял задачу "{task.title}". Статус: Готово'
                 )
 
         elif new_status_name == 'в работе' and old_status_name == 'на проверке':
@@ -346,7 +346,7 @@ def request_executor_change(request, task_id):
         Notification.objects.create(
             user=request.user,
             task=task,
-            message=f'Вы запросили передачу задачи "{task.title}" сотруднику {to_user}. Ожидайте решения руководителя.'
+            message=f'Вы запросили передачу задачи "{task.title}" сотруднику {to_user.get_full_name() or to_user.username}. Ожидайте решения руководителя.'
         )
 
         # Запись в историю
@@ -363,7 +363,7 @@ def request_executor_change(request, task_id):
             Notification.objects.create(
                 user=task.project.manager,
                 task=task,
-                message=f'{request.user} просит передать задачу "{task.title}" сотруднику {to_user}.'
+                message=f'{request.user.get_full_name() or request.user.username} просит передать задачу "{task.title}" сотруднику {to_user.get_full_name() or to_user.username}. Причина: {reason or "не указана"}.'
             )
 
         messages.success(request, '✅ Запрос на смену исполнителя отправлен руководителю.')
@@ -593,10 +593,11 @@ def approve_executor_change(request, request_id):
     req.task.save()
 
     # Уведомление новому исполнителю
+    manager_name = req.task.project.manager.get_full_name() or req.task.project.manager.username
     Notification.objects.create(
         user=req.to_user,
         task=req.task,
-        message=f'Руководитель назначил вас исполнителем задачи "{req.task.title}".'
+        message=f'{manager_name} передал(а) вам задачу "{req.task.title}".'
     )
 
     # Уведомление старому исполнителю

@@ -195,12 +195,16 @@
         <div class="card">
             <h3>Действия</h3>
             {% with pending=task.change_requests.all %}
-                {% if pending %}
-                    <button class="btn btn-outline btn-sm" disabled>Запрос отправлен</button>
-                {% else %}
-                    <a href="{% url 'request-change' task.id %}" class="btn btn-outline btn-sm">Передать задачу</a>
-                {% endif %}
-            {% endwith %}
+    {% if pending and not pending.0.is_approved %}
+        <button class="btn btn-sm mt-2" style="border: 1px solid var(--text-muted); color: var(--text-muted);" disabled>
+            Запрос отправлен
+        </button>
+    {% else %}
+        <a href="{% url 'request-change' task.id %}" class="btn btn-sm mt-2" style="border: 1px solid var(--warning); color: var(--warning);">
+            Передать задачу
+        </a>
+    {% endif %}
+{% endwith %}
         </div>
     </div>
 </div>
