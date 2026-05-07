@@ -1,0 +1,59 @@
+{% extends 'resource_planning/base.html' %}
+
+{% block title %}Уведомления | Projector{% endblock %}
+{% block page_title %}Уведомления{% endblock %}
+
+{% block content %}
+
+<h1 class="page-title">Уведомления</h1>
+<p class="page-subtitle">{% if unread_count > 0 %}Непрочитанных: {{ unread_count }}{% else %}Все уведомления прочитаны{% endif %}</p>
+
+{% if projects %}
+<div style="margin-bottom: 20px;">
+    <form method="get" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <label class="form-label" style="margin-bottom: 0; white-space: nowrap;">Проект:</label>
+        <select name="project_id" class="form-select" style="width: auto; min-width: 220px;" onchange="this.form.submit()">
+            <option value="">Все проекты</option>
+            {% for p in projects %}
+                <option value="{{ p.id }}" {% if current_project_id == p.id|stringformat:"s" %}selected{% endif %}>
+                    {{ p.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+{% endif %}
+
+{% if notifications %}
+<div style="display: flex; flex-direction: column; gap: 10px;">
+    {% for notification in notifications %}
+    <div class="card" style="{% if not notification.is_read %}border-left: 4px solid var(--primary);{% endif %} padding: 16px 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <p style="font-size: 14px; color: var(--text-main); margin-bottom: 4px;">
+                    {{ notification.message }}
+                </p>
+                <p style="font-size: 12px; color: var(--text-secondary);">
+                    {{ notification.created_at|date:"d.m.Y H:i" }}
+                    {% if not notification.is_read %}
+                        · <span style="color: var(--primary); font-weight: 500;">Новое</span>
+                    {% endif %}
+                </p>
+            </div>
+            {% if not notification.is_read %}
+                <a href="{% url 'mark_notification_read' notification.id %}" style="font-size: 12px; color: var(--primary); text-decoration: none; white-space: nowrap;">
+                    Отметить прочитанным
+                </a>
+            {% endif %}
+            <a href="{% url 'task_detail_view' notification.task.id %}" class="btn btn-outline btn-sm">К задаче</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+    <p style="font-size: 15px; font-weight: 500; margin-bottom: 6px;">Нет уведомлений</p>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -134,6 +134,18 @@
 </div>
 {% endif %}
 
+<div style="margin-bottom: 20px;">
+    <form method="get" style="display: flex; gap: 10px; align-items: center;">
+        <label class="form-label" style="margin-bottom: 0;">Проект:</label>
+        <select name="project_id" class="form-select" style="width: auto; min-width: 220px;" onchange="this.form.submit()">
+            <option value="">Все сотрудники</option>
+            {% for p in projects %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
 <!-- Список команды -->
 {% if employees %}
 <div class="team-list">

@@ -183,11 +183,14 @@
                 <span class="prio-low">{{ project.priority.name }} приоритет</span>
             {% endif %}
         </p>
+        <p class="page-subtitle">
+            <a href="{% url 'project_list' %}" style="color: var(--primary);">← К списку проектов</a>
+            &nbsp;&middot;&nbsp;
+        </p>
     </div>
     <div class="actions">
         <a href="{% url 'project_gantt' project.id %}" class="btn btn-primary">Диаграмма Ганта</a>
         <a href="{% url 'project_edit' project.id %}" class="btn btn-outline">Редактировать</a>
-        <a href="{% url 'project_list' %}" class="btn btn-outline">К списку проектов</a>
     </div>
 </div>
 
@@ -274,7 +277,11 @@
 <a href="{% url 'workload' %}?project_id={{ project.id }}" style="font-size: 13px; color: var(--primary); text-decoration: none;">Подробная загрузка →</a>
 
 <!-- ===== Задачи проекта ===== -->
-<h3 class="section-title">Задачи проекта</h3>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <h3 class="section-title" style="margin: 0;">Задачи проекта</h3>
+    <a href="{% url 'project_gantt' project.id %}" class="btn btn-primary btn-sm" style="width:150px; height:40px; font-size:14px;">+ Создать задачу</a>
+</div>
+
 {% if tasks %}
 <div class="table-wrapper">
     <table>
@@ -289,7 +296,11 @@
         <tbody>
             {% for task in tasks %}
             <tr>
-                <td style="font-weight: 500;">{{ task.title }}</td>
+                <td style="font-weight: 500;">
+                    <a href="{% url 'task_detail_view' task.id %}" style="font-weight: 500; color: var(--text-heading); text-decoration: none;">
+                        {{ task.title }}
+                    </a>
+                </td>
                 <td>
                     {% if task.status.name == 'Новая' %}
                         <span class="badge badge-active">{{ task.status.name }}</span>

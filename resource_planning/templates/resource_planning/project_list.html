@@ -152,6 +152,14 @@
         margin-top: 20px;
         justify-content: flex-end;
     }
+
+    .actions-cell {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
 </style>
 {% endblock %}
 
@@ -182,7 +190,7 @@
                 <th>Приоритет</th>
                 <th>Прогресс</th>
                 <th>Дедлайн</th>
-                <th>Действия</th>
+                <th style="text-align: center;">Действия</th>
             </tr>
         </thead>
         <tbody>
@@ -237,14 +245,17 @@
                     {% endif %}
                 </td>
 
-                <td>
+                <td class="actions-cell">
                     <a href="{% url 'project_gantt' project.id %}" class="gantt-link">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
                             <path d="M3 3v18h18"/>
                             <rect width="12" height="4" x="7" y="5" rx="1"/>
                             <rect width="7" height="4" x="7" y="13" rx="1"/>
                         </svg>
                         Гант
+                    </a>
+                    <a href="{% url 'project_detail' project.id %}" class="gantt-link" style="border-color: var(--success); color: var(--success);">
+                        Подробнее
                     </a>
                 </td>
             </tr>

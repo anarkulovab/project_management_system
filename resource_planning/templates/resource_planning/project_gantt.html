@@ -199,15 +199,8 @@
                 document.getElementById('create-modal').classList.add('active');
             },
             eventClick: function(info) {
-                var event = info.event;
-                var props = event.extendedProps;
-                alert(
-                    'Задача: ' + event.title +
-                    '\nСтатус: ' + (props.status || '—') +
-                    '\nИсполнитель: ' + (props.assignee || '—') +
-                    '\nПриоритет: ' + (props.priority || '—') +
-                    '\nСрок: ' + (event.endStr || 'не указан')
-                );
+                var taskId = info.event.id;
+                window.location.href = '/resource/task/' + taskId + '/';
             },
             eventDidMount: function(info) {
                 if (info.event.extendedProps.status === 'Готово') {

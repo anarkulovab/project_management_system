@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User, Group
 from django.shortcuts import redirect
 from .models import Project, TaskAssignment, KPI, ProjectStatus, UserAbsence, Priority, Employee
-from task_management.models import Task, TaskStatus
+from task_management.models import Task, TaskStatus, Notification
 from .forms import ProjectForm
 import json
 from datetime import date, timedelta
@@ -16,6 +16,7 @@ from django.db import models
 from django.contrib import messages
 import random
 import string
+from task_management.models import ExecutorChangeRequest
 
 @login_required
 # Дашборды
@@ -85,7 +86,8 @@ def project_list(request):
 
     statuses = ProjectStatus.objects.all()
     priorities = Priority.objects.all()
-    users = User.objects.filter(is_active=True, is_superuser=False)
+    employee_ids = Employee.objects.filter(manager=request.user).values_list('employee_id', flat=True)
+    users = User.objects.filter(id__in=employee_ids)
 
     for project in projects:
         kpi = project.kpis.filter(name='Процент выполнения').first()
@@ -120,7 +122,8 @@ def project_create(request):
 # Диаграмма Ганта
 def project_gantt(request, project_id):
     project = get_object_or_404(Project, id=project_id)
-    users = User.objects.filter(is_active=True, is_superuser=False)
+    employee_ids = Employee.objects.filter(manager=request.user).values_list('employee_id', flat=True)
+    users = User.objects.filter(id__in=employee_ids)
     return render(request, 'resource_planning/project_gantt.html', {
         'project': project,
         'users': users,
@@ -357,6 +360,14 @@ def team(request):
     context = {
         'employees': employees,
     }
+    project_id = request.GET.get('project_id', '')
+    if project_id:
+        employees = Employee.objects.filter(
+            manager=request.user,
+            employee__participating_projects__id=project_id
+        ).select_related('employee').distinct()
+    else:
+        employees = Employee.objects.filter(manager=request.user).select_related('employee')
     return render(request, 'resource_planning/team.html', context)
 
 
@@ -421,3 +432,97 @@ def redirect_by_role(request):
         return redirect('/tasks/board')  # позже — десктоп Насти
 
     return redirect('dashboard')
+
+def task_detail(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    done_status = TaskStatus.objects.get(name='Готово')
+    work_status = TaskStatus.objects.get(name='В работе')
+
+    pending_requests = ExecutorChangeRequest.objects.filter(task=task, is_approved=False)
+
+    context = {
+        'task': task,
+        'done_status_id': done_status.id,
+        'work_status_id': work_status.id,
+        'pending_requests': pending_requests,
+    }
+    return render(request, 'resource_planning/task_detail_r.html', context)
+
+
+def approve_executor_change(request, request_id):
+    req = get_object_or_404(ExecutorChangeRequest, id=request_id)
+    req.is_approved = True
+    req.save()
+    req.task.assigned_to = req.to_user
+    req.task.save()
+
+    Notification.objects.create(
+        user=req.to_user,
+        task=req.task,
+        message=f'{request.user.get_full_name() or request.user.username} назначил вас исполнителем задачи «{req.task.title}».'
+    )
+
+    messages.success(request, 'Исполнитель изменён.')
+    return redirect('task_detail_view', task_id=req.task.id)
+
+
+@csrf_exempt
+def update_task_status(request, task_id):
+    if request.method == 'POST':
+        task = get_object_or_404(Task, id=task_id)
+        data = json.loads(request.body)
+        status_id = data.get('status_id')
+
+        if status_id:
+            try:
+                new_status = TaskStatus.objects.get(id=status_id)
+                task.status = new_status
+                task.save()
+
+                # Создаём уведомление исполнителю
+                if task.assigned_to:
+                    Notification.objects.create(
+                        user=task.assigned_to,
+                        task=task,
+                        message=f'Руководитель изменил статус задачи «{task.title}» на «{new_status.name}».'
+                    )
+
+                return JsonResponse({'success': True, 'status': new_status.name})
+            except TaskStatus.DoesNotExist:
+                return JsonResponse({'error': 'Статус не найден'}, status=404)
+
+    return JsonResponse({'error': 'Неверный запрос'}, status=400)
+
+
+@login_required
+def notifications_list(request):
+    project_id = request.GET.get('project_id', '')
+
+    notifications = Notification.objects.filter(user=request.user).select_related('task__project').order_by(
+        '-created_at')
+
+    if project_id:
+        notifications = notifications.filter(task__project_id=project_id)
+
+    unread_count = notifications.filter(is_read=False).count()
+
+    # Список проектов для фильтра (только те, по которым есть уведомления)
+    projects_with_notifications = Project.objects.filter(
+        tasks__notification__user=request.user
+    ).distinct()
+
+    context = {
+        'notifications': notifications,
+        'unread_count': unread_count,
+        'projects': projects_with_notifications,
+        'current_project_id': project_id,
+    }
+    return render(request, 'resource_planning/notifications.html', context)
+
+
+@login_required
+def mark_notification_read(request, notification_id):
+    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notification.is_read = True
+    notification.save()
+    return redirect('notifications_list')

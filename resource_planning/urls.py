@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from resource_planning import views
 
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
@@ -13,4 +13,10 @@ urlpatterns = [
     path('projects/<int:project_id>/edit/', views.project_edit, name='project_edit'),
     path('team/', views.team, name='team'),
     path('team/add-employee/', views.add_employee, name='add_employee'),
+    path('task/<int:task_id>/', views.task_detail, name='task_detail_view'),
+    path('change-request/<int:request_id>/approve/', views.approve_executor_change, name='approve-change'),
+    path('task/<int:task_id>/update-status/', views.update_task_status, name='update_task_status'),
+    path('change-request/<int:request_id>/approve/', views.approve_executor_change, name='approve_change'),
+    path('notifications/', views.notifications_list, name='notifications_list'),
+    path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
 ]

@@ -194,7 +194,7 @@ def update_task_status(request, task_id):
                 Notification.objects.create(
                     user=task.project.manager,
                     task=task,
-                    message=f'Исполнитель {request.user} перевёл задачу "{task.title}" в статус "На проверке".'
+                    message=f'Исполнитель {request.user.get_full_name()} перевёл задачу "{task.title}" в статус "На проверке".'
                 )
 
         elif new_status_name == 'готово' and old_status_name == 'на проверке':
@@ -250,7 +250,7 @@ def task_detail(request, task_id):
         'comments': comments,
         'history': history,
     }
-    return render(request, 'task_management/task_detail.html', context)
+    return render(request, 'task_management/task_detail_r.html', context)
 
 
 from django.shortcuts import redirect
