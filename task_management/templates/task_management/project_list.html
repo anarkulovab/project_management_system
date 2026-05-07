@@ -1,119 +1,84 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мои проекты</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --bg-deep: #0A0F14; --bg-surface: #141B22; --primary-base: #2C3E50;
-            --role-member: #9B59B6; --accent-core: #3498DB; --success: #27AE60;
-            --text-primary: #FFFFFF; --text-main: #E0E4E8; --text-secondary: #9AA4B0; --text-muted: #7F8C8D;
-        }
-        body { background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
-        .navbar { background: var(--primary-base) !important; border-bottom: 2px solid var(--role-member); }
-        .user-badge { color: var(--role-member); font-weight: 600; }
-        .page-title { color: var(--text-primary); border-left: 4px solid var(--role-member); padding-left: 15px; }
+{% extends 'task_management/base.html' %}
+{% load static %}
 
-        .project-card {
-            background: var(--bg-surface);
-            border: 1px solid #2a3a4a;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 15px;
-            transition: all 0.2s;
-        }
-        .project-card:hover {
-            border-color: var(--role-member);
-            transform: translateY(-2px);
-        }
-        .project-name {
-            color: var(--text-primary);
-            text-decoration: none;
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-        .project-name:hover { color: var(--role-member); }
+{% block title %}Мои проекты | Projector{% endblock %}
+{% block page_title %}Мои проекты{% endblock %}
 
-        .stat-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-right: 8px;
-        }
-        .stat-total { background: rgba(52,152,219,0.2); color: var(--accent-core); }
-        .stat-done { background: rgba(39,174,96,0.2); color: var(--success); }
+{% block extra_head %}
+<style>
+    .project-card {
+        display: block;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 12px;
+        text-decoration: none;
+        box-shadow: var(--shadow);
+        transition: all 0.15s;
+    }
+    .project-card:hover {
+        border-color: var(--role-member);
+        transform: translateY(-2px);
+    }
+    .project-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-heading);
+    }
+    .project-desc {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-top: 6px;
+    }
+    .project-meta {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 10px;
+    }
+    .project-stats {
+        display: flex;
+        gap: 12px;
+        margin-top: 10px;
+    }
+    .stat-badge {
+        font-size: 12px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+    .stat-total { background: #f0f3ff; color: var(--primary); }
+    .stat-done { background: #e8f8f2; color: var(--success); }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-muted);
+    }
+</style>
+{% endblock %}
 
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-muted);
-        }
-        .empty-icon { font-size: 3rem; margin-bottom: 15px; }
-                .btn-outline-light {
-            border-color: #2a3a4a;
-            color: var(--text-secondary);
-        }
-        .btn-outline-light:hover {
-            background: var(--role-member);
-            border-color: var(--role-member);
-            color: white;
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-dark mb-4">
-    <div class="container">
-        <span class="navbar-brand">📋 Управление проектами</span>
-        <div>
-            <a href="{% url 'notifications' %}" class="btn btn-outline-light btn-sm me-2 position-relative">
-                🔔
-                {% if unread_count > 0 %}
-                    <span style="background: var(--danger); color: white; border-radius: 50%; padding: 1px 6px; font-size: 0.7rem; position: absolute; top: -5px; right: -5px;">{{ unread_count }}</span>
-                {% endif %}
-            </a>
-            <a href="{% url 'kanban-board' %}" class="btn btn-outline-light btn-sm me-2">Доска</a>
-            <a href="{% url 'project-list' %}" class="btn btn-outline-light btn-sm me-2">Проекты</a>
-            <a href="{% url 'personal-dashboard' %}" class="btn btn-outline-light btn-sm me-2">Кабинет</a>
-            <span class="navbar-text user-badge">{{ user.username }}</span>
+{% block content %}
+
+{% if projects %}
+    {% for project in projects %}
+    <a href="{% url 'project-detail' project.id %}" class="project-card">
+        <div class="project-name">{{ project.name }}</div>
+        <div class="project-desc">{{ project.description|truncatechars:150|default:"Описание отсутствует" }}</div>
+        <div class="project-meta">
+            {{ project.start_date_plan|date:"d.m.Y"|default:"—" }} &mdash; {{ project.end_date_plan|date:"d.m.Y"|default:"—" }}
+            &middot; Руководитель: {% if project.manager %}{{ project.manager.get_full_name|default:project.manager.username }}{% else %}Не назначен{% endif %}
         </div>
+        <div class="project-stats">
+            <span class="stat-badge stat-total">Задач: {{ project.task_count }}</span>
+            <span class="stat-badge stat-done">Выполнено: {{ project.done_count }}</span>
+        </div>
+    </a>
+    {% endfor %}
+{% else %}
+    <div class="empty-state">
+        <p style="font-size: 15px; font-weight: 500;">Нет проектов</p>
+        <p style="font-size: 13px; margin-top: 6px;">Вы пока не добавлены ни в один проект</p>
     </div>
-</nav>
+{% endif %}
 
-    <div class="container">
-        <h2 class="page-title mb-4">📁 Мои проекты</h2>
-
-        {% if projects %}
-            {% for project in projects %}
-            <a href="{% url 'project-detail' project.id %}" style="text-decoration: none;">
-                <div class="project-card">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <span class="project-name">{{ project.name }}</span>
-                            <p style="color: var(--text-muted); margin: 5px 0 10px 0;">{{ project.description|truncatechars:150 }}</p>
-                            <small style="color: var(--text-secondary);">
-                                📅 {{ project.start_date_plan|date:"d.m.Y"|default:"—" }} — {{ project.end_date_plan|date:"d.m.Y"|default:"—" }}
-                                · 👔 {{ project.manager|default:"Не назначен" }}
-                            </small>
-                        </div>
-                        <div class="text-end">
-                            <span class="stat-badge stat-total">📋 {{ project.task_count }}</span>
-                            <br>
-                            <span class="stat-badge stat-done mt-1">✅ {{ project.done_count }}</span>
-                        </div>
-                    </div>
-                </div>
-            </a>
-            {% endfor %}
-        {% else %}
-            <div class="empty-state">
-                <div class="empty-icon">📁</div>
-                <p>У вас пока нет проектов</p>
-            </div>
-        {% endif %}
-    </div>
-</body>
-</html>
+{% endblock %}

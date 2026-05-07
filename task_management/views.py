@@ -17,10 +17,10 @@ def kanban_board(request):
 
     statuses = TaskStatus.objects.all().order_by('order')
 
-    # Получаем задачи текущего пользователя (только родительские, не подзадачи)
+    # Получаем задачи текущего пользователя (только основные, не подзадачи)
     tasks = Task.objects.filter(
         assigned_to=request.user,
-        parent_task__isnull=True  # только основные задачи
+        parent_task__isnull=True
     ).select_related('project', 'status').prefetch_related('subtasks')
 
     # ФИЛЬТРЫ
@@ -32,10 +32,53 @@ def kanban_board(request):
     if priority:
         tasks = tasks.filter(priority=priority)
 
+    today = timezone.now().date()
+
+    # Автоперенос запланированных задач с сегодняшней датой начала в «Новая»
+    planned_status = TaskStatus.objects.filter(name='Запланирована').first()
+    new_status = TaskStatus.objects.filter(name='Новая').first()
+    if planned_status and new_status:
+        due_tasks = tasks.filter(status=planned_status, planned_start_date__date=today)
+        for t in due_tasks:
+            old_status = t.status.name
+            t.status = new_status
+            t.save()
+            TaskHistory.objects.create(
+                task=t,
+                user=t.assigned_to,
+                changed_field='status',
+                old_value=old_status,
+                new_value=new_status.name,
+            )
+            Notification.objects.create(
+                user=t.assigned_to,
+                task=t,
+                message=f'Задача «{t.title}» перенесена в «Новая». Дата начала выполнения — сегодня.'
+            )
+
+    # Обновляем tasks после возможного переноса
+    tasks = Task.objects.filter(
+        assigned_to=request.user,
+        parent_task__isnull=True
+    ).select_related('project', 'status').prefetch_related('subtasks')
+
+    if project_id:
+        tasks = tasks.filter(project_id=project_id)
+    if priority:
+        tasks = tasks.filter(priority=priority)
+
     # Добавляем отфильтрованные задачи к каждому статусу
     for status in statuses:
         status.filtered_tasks = tasks.filter(status=status)
         status.task_count = status.filtered_tasks.count()
+        # Для каждой задачи в колонке «Запланирована» проверяем, наступила ли дата
+        if status.name == 'Запланирована':
+            for task in status.filtered_tasks:
+                task.is_active = task.planned_start_date and task.planned_start_date.date() <= today
+                task.start_date_display = task.planned_start_date.strftime('%d.%m.%Y') if task.planned_start_date else '—'
+        else:
+            for task in status.filtered_tasks:
+                task.is_active = True
 
     projects = Project.objects.all()
 
@@ -46,8 +89,6 @@ def kanban_board(request):
         'selected_priority': priority,
     }
     return render(request, 'task_management/kanban_board.html', context)
-
-
 @csrf_exempt
 @login_required
 def update_task_status(request, task_id):
@@ -104,7 +145,12 @@ def update_task_status(request, task_id):
                     'success': False,
                     'error': 'Только руководитель может выполнить это действие.'
                 })
-
+        # Нельзя вручную перенести в «Запланирована»
+        if new_status_name == 'запланирована':
+            return JsonResponse({
+                'success': False,
+                'error': 'Нельзя вручную перенести задачу в «Запланирована». Этот статус назначается автоматически при создании задачи с будущей датой начала.'
+            })
         # Полностью запрещённые переходы
         forbidden_transitions = [
             ('новая', 'на проверке'),
@@ -296,6 +342,7 @@ def request_executor_change(request, task_id):
             reason=reason,
         )
         # Оповещение себе
+        # Оповещение себе
         Notification.objects.create(
             user=request.user,
             task=task,
@@ -316,7 +363,7 @@ def request_executor_change(request, task_id):
             Notification.objects.create(
                 user=task.project.manager,
                 task=task,
-                message=f'🔄 {request.user} просит передать задачу "{task.title}" сотруднику {to_user}.'
+                message=f'{request.user} просит передать задачу "{task.title}" сотруднику {to_user}.'
             )
 
         messages.success(request, '✅ Запрос на смену исполнителя отправлен руководителю.')
@@ -494,3 +541,55 @@ def mark_notification_read(request, notification_id):
 def mark_all_read(request):
     Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
     return redirect('notifications')
+
+
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+
+
+@login_required
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Пароль успешно изменён.')
+            return redirect('personal-dashboard')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
+    else:
+        form = PasswordChangeForm(user=request.user)
+
+    return render(request, 'task_management/change_password.html', {'form': form})
+
+
+@login_required
+def change_username(request):
+    if request.method == 'POST':
+        new_username = request.POST.get('username')
+        if new_username and new_username != request.user.username:
+            if User.objects.filter(username=new_username).exists():
+                messages.error(request, 'Этот логин уже занят.')
+            else:
+                request.user.username = new_username
+                request.user.save()
+                messages.success(request, 'Логин успешно изменён.')
+                return redirect('personal-dashboard')
+    return redirect('personal-dashboard')
+
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+
+
+@login_required
+def redirect_by_role(request):
+    user = request.user
+    is_manager = user.groups.filter(name='Руководитель проекта').exists()
+
+    if is_manager or user.is_staff:
+        return redirect('/resource/')  # ← правильный префикс Бегимай
+    else:
+        return redirect('kanban-board')

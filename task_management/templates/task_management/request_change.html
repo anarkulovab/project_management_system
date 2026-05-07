@@ -1,75 +1,43 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Запросить смену исполнителя</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --bg-deep: #0A0F14; --bg-surface: #141B22; --primary-base: #2C3E50;
-            --role-member: #9B59B6; --text-primary: #FFFFFF; --text-main: #E0E4E8;
-            --text-secondary: #9AA4B0; --text-muted: #7F8C8D;
-        }
-        body { background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
-        .navbar { background: var(--primary-base) !important; border-bottom: 2px solid var(--role-member); }
-        .card { background: var(--bg-surface); border: 1px solid #2a3a4a; border-radius: 10px; }
-        .card-header { background: var(--primary-base); border-bottom: 1px solid #2a3a4a; color: var(--text-primary); font-weight: 600; }
-        .form-control, .form-select { background: var(--bg-deep); border: 1px solid #2a3a4a; color: var(--text-main); }
-        .form-control:focus, .form-select:focus { border-color: var(--role-member); box-shadow: 0 0 0 0.2rem rgba(155, 89, 182, 0.25); }
-        .btn-primary { background: var(--role-member); border-color: var(--role-member); }
-        .btn-primary:hover { background: #8e44ad; }
-        .btn-back { border: 1px solid #2a3a4a; color: var(--text-secondary); }
-        .btn-back:hover { background: var(--role-member); color: white; }
-        .btn-outline-light { border-color: #2a3a4a; color: var(--text-secondary); }
-        .btn-outline-light:hover { background: var(--role-member); border-color: var(--role-member); color: white; }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-dark mb-4">
-        <div class="container">
-            <span class="navbar-brand">📋 Управление проектами</span>
-            <div>
-                <a href="{% url 'notifications' %}" class="btn btn-outline-light btn-sm me-2 position-relative">🔔</a>
-                <a href="{% url 'kanban-board' %}" class="btn btn-outline-light btn-sm me-2">Доска</a>
-                <a href="{% url 'project-list' %}" class="btn btn-outline-light btn-sm me-2">Проекты</a>
-                <a href="{% url 'personal-dashboard' %}" class="btn btn-outline-light btn-sm me-2">Кабинет</a>
-                <span class="navbar-text" style="color: var(--role-member);">{{ user.username }}</span>
-            </div>
+{% extends 'task_management/base.html' %}
+{% load static %}
+
+{% block title %}Передать задачу | Projector{% endblock %}
+{% block page_title %}Передать задачу{% endblock %}
+
+{% block extra_head %}
+<style>
+    .form-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 24px;
+        max-width: 500px;
+        box-shadow: var(--shadow);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'task-detail' task.id %}" class="btn btn-outline" style="margin-bottom: 20px;">Назад к задаче</a>
+
+<div class="form-card">
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Задача: <strong>{{ task.title }}</strong></p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label class="form-label">Кому передать</label>
+            <select name="to_user" class="form-select" required>
+                <option value="">Выберите коллегу</option>
+                {% for user in participants %}
+                    <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                {% endfor %}
+            </select>
         </div>
-    </nav>
-
-    <div class="container">
-        <a href="{% url 'task-detail' task.id %}" class="btn btn-back mb-3">← Назад к задаче</a>
-
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">🔄 Запросить смену исполнителя</div>
-                    <div class="card-body">
-                        <p style="color: var(--text-muted);">Задача: <strong>{{ task.title }}</strong></p>
-
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="mb-3">
-                                <label class="form-label" style="color: var(--text-secondary);">Кому передать</label>
-                                <select name="to_user" class="form-select" required>
-                                    <option value="">Выберите коллегу</option>
-                                    {% for user in participants %}
-                                        <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label" style="color: var(--text-secondary);">Причина</label>
-                                <textarea name="reason" class="form-control" rows="2" placeholder="Почему передаёте задачу?"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Отправить запрос</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+        <div class="form-group">
+            <label class="form-label">Причина</label>
+            <textarea name="reason" class="form-input" rows="2" placeholder="Почему передаёте задачу?"></textarea>
         </div>
-    </div>
-</body>
-</html>
+        <button type="submit" class="btn btn-primary">Отправить запрос</button>
+    </form>
+</div>
+{% endblock %}

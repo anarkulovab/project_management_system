@@ -16,4 +16,6 @@ urlpatterns = [
     path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark-read'),
     path('notifications/read-all/', views.mark_all_read, name='mark-all-read'),
     path('task/<int:task_id>/request-change/', views.request_executor_change, name='request-change'),
+    path('change-password/', views.change_password, name='change-password'),
+    path('change-username/', views.change_username, name='change-username'),
 ]

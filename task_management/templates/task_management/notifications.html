@@ -1,105 +1,61 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Уведомления</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --bg-deep: #0A0F14; --bg-surface: #141B22; --primary-base: #2C3E50;
-            --role-member: #9B59B6; --accent-core: #3498DB; --success: #27AE60;
-            --warning: #F39C12; --danger: #E74C3C; --info: #1ABC9C;
-            --text-primary: #FFFFFF; --text-main: #E0E4E8; --text-secondary: #9AA4B0; --text-muted: #7F8C8D;
-        }
-        body { background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
-        .navbar { background: var(--primary-base) !important; border-bottom: 2px solid var(--role-member); }
-        .user-badge { color: var(--role-member); font-weight: 600; }
-        .page-title { color: var(--text-primary); border-left: 4px solid var(--role-member); padding-left: 15px; }
-        .btn-back { border: 1px solid #2a3a4a; color: var(--text-secondary); }
-        .btn-back:hover { background: var(--role-member); border-color: var(--role-member); color: white; }
+{% extends 'task_management/base.html' %}
+{% load static %}
 
-        .notification-item {
-            background: var(--bg-surface);
-            border: 1px solid #2a3a4a;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 10px;
-        }
-        .notification-item.unread {
-            border-left: 3px solid var(--warning);
-            background: #1a2332;
-        }
-        .notification-item.read {
-            opacity: 0.7;
-        }
-        .badge-notify {
-            background: var(--danger);
-            color: white;
-            border-radius: 50%;
-            padding: 2px 7px;
-            font-size: 0.7rem;
-            margin-left: 5px;
-        }
-                .btn-outline-light {
-            border-color: #2a3a4a;
-            color: var(--text-secondary);
-        }
-        .btn-outline-light:hover {
-            background: var(--role-member);
-            border-color: var(--role-member);
-            color: white;
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-dark mb-4">
-        <div class="container">
-            <span class="navbar-brand">📋 Управление проектами</span>
-            <div>
-                <a href="{% url 'notifications' %}" class="btn btn-outline-light btn-sm me-2 position-relative">
-                    🔔
-                    {% if unread_count > 0 %}
-                        <span class="badge-notify">{{ unread_count }}</span>
+{% block title %}Уведомления | Projector{% endblock %}
+{% block page_title %}Уведомления{% endblock %}
+
+{% block extra_head %}
+<style>
+    .notification-item {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 8px;
+        box-shadow: var(--shadow);
+    }
+    .notification-item.unread {
+        border-left: 3px solid var(--warning);
+        background: #fefefb;
+    }
+    .notification-message {
+        font-size: 14px;
+        color: var(--text-main);
+    }
+    .notification-time {
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if unread_count > 0 %}
+<div style="margin-bottom: 16px;">
+    <a href="{% url 'mark-all-read' %}" class="btn btn-primary btn-sm">Отметить все прочитанными</a>
+</div>
+{% endif %}
+
+{% if notifications %}
+    {% for notification in notifications %}
+        <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <p class="notification-message">{{ notification.message }}</p>
+                    <p class="notification-time">{{ notification.created_at|date:"d.m.Y H:i" }}</p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    {% if not notification.is_read %}
+                        <a href="{% url 'mark-read' notification.id %}" class="btn btn-outline btn-sm">Прочитано</a>
                     {% endif %}
-                </a>
-                <a href="{% url 'kanban-board' %}" class="btn btn-outline-light btn-sm me-2">Доска</a>
-                <a href="{% url 'project-list' %}" class="btn btn-outline-light btn-sm me-2">Проекты</a>
-                <a href="{% url 'personal-dashboard' %}" class="btn btn-outline-light btn-sm me-2">Кабинет</a>
-
-                <span class="navbar-text user-badge">{{ user.username }}</span>
+                    <a href="{% url 'task-detail' notification.task.id %}" class="btn btn-outline btn-sm">К задаче</a>
+                </div>
             </div>
         </div>
-    </nav>
+    {% endfor %}
+{% else %}
+    <p style="text-align: center; color: var(--text-muted); padding: 40px;">Нет уведомлений</p>
+{% endif %}
 
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="page-title">🔔 Уведомления</h2>
-            {% if unread_count > 0 %}
-                <a href="{% url 'mark-all-read' %}" class="btn btn-sm" style="background: var(--role-member); color: white;">Прочитать все</a>
-            {% endif %}
-        </div>
-
-        {% if notifications %}
-            {% for notification in notifications %}
-                <div class="notification-item {% if not notification.is_read %}unread{% else %}read{% endif %}">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <p class="mb-1" style="color: var(--text-main);">{{ notification.message }}</p>
-                            <small style="color: var(--text-muted);">{{ notification.created_at|date:"d.m.Y H:i" }}</small>
-                        </div>
-                        <div>
-                            {% if not notification.is_read %}
-                                <a href="{% url 'mark-read' notification.id %}" class="btn btn-sm btn-outline-light">✓</a>
-                            {% endif %}
-                            <a href="{% url 'task-detail' notification.task.id %}" class="btn btn-sm btn-outline-light">→</a>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <p style="color: var(--text-muted); text-align: center; margin-top: 40px;">Нет уведомлений</p>
-        {% endif %}
-    </div>
-</body>
-</html>
+{% endblock %}

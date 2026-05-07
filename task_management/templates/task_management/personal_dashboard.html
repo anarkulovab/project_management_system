@@ -1,291 +1,291 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Личный кабинет</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --bg-deep: #0A0F14;
-            --bg-surface: #141B22;
-            --primary-base: #2C3E50;
-            --role-member: #9B59B6;
-            --accent-core: #3498DB;
-            --success: #27AE60;
-            --warning: #F39C12;
-            --danger: #E74C3C;
-            --info: #1ABC9C;
-            --text-primary: #FFFFFF;
-            --text-main: #E0E4E8;
-            --text-secondary: #9AA4B0;
-            --text-muted: #7F8C8D;
-        }
-        body { background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
-        .navbar { background: var(--primary-base) !important; border-bottom: 2px solid var(--role-member); }
-        .user-badge { color: var(--role-member); font-weight: 600; }
-        .page-title { color: var(--text-primary); border-left: 4px solid var(--role-member); padding-left: 15px; }
-        .btn-back { border: 1px solid #2a3a4a; color: var(--text-secondary); }
-        .btn-back:hover { background: var(--role-member); border-color: var(--role-member); color: white; }
+{% extends 'task_management/base.html' %}
+{% load static %}
 
-        .card { background: var(--bg-surface); border: 1px solid #2a3a4a; border-radius: 10px; }
-        .card-header { background: var(--primary-base); border-bottom: 1px solid #2a3a4a; color: var(--text-primary); font-weight: 600; }
+{% block title %}Личный кабинет | Projector{% endblock %}
+{% block page_title %}Личный кабинет{% endblock %}
 
-        /* Статистическая строка */
-        .stat-row {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .stat-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-        .stat-value { font-weight: 700; font-size: 1.1rem; }
-        .stat-label { color: var(--text-muted); font-size: 0.85rem; }
+{% block extra_head %}
+<style>
+    .dashboard-grid {
+        display: flex;
+        gap: 24px;
+    }
+    .profile-col {
+        flex: 1;
+        max-width: 300px;
+    }
+    .stats-col {
+        flex: 2;
+    }
+    .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow);
+    }
+    .card h3 {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-heading);
+        margin-bottom: 16px;
+    }
+    .profile-field {
+        margin-bottom: 14px;
+    }
+    .profile-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 2px;
+    }
+    .profile-value {
+        font-size: 14px;
+        color: var(--text-main);
+        font-weight: 500;
+    }
+    .stat-summary {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    .stat-big {
+        text-align: center;
+        flex: 1;
+    }
+    .stat-number {
+        font-size: 28px;
+        font-weight: 700;
+    }
+    .stat-sub {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 2px;
+    }
+    .stat-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        padding: 4px 0;
+    }
+    .stat-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+    }
+    .task-mini {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 6px;
+        font-size: 13px;
+    }
+    .task-mini a {
+        color: var(--text-heading);
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .task-mini a:hover { color: var(--role-member); }
+    .badge-status {
+        font-size: 10px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    .status-new { background: #d5f5e8; color: #1ABC9C; }
+    .status-work { background: #dae8fc; color: #3498DB; }
+    .status-review { background: #fef5ee; color: #f0b065; }
+    .status-done { background: #e8f8f2; color: #6dbf8b; }
+    .status-blocked { background: #fde9e7; color: #e0857b; }
+    .status-planned { background: #e0f5f3; color: #7ec8c3; }
+    .overdue-box {
+        background: #fef5ee;
+        border: 1px solid #f0b065;
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 20px;
+    }
+    .chart-wrap {
+        max-width: 200px;
+        margin: 0 auto 16px;
+    }
+</style>
+{% endblock %}
 
-        .dot-new { background: var(--info); }
-        .dot-progress { background: var(--accent-core); }
-        .dot-review { background: var(--warning); }
-        .dot-done { background: var(--success); }
-        .dot-blocked { background: var(--danger); }
+{% block content %}
 
-        .task-list-item {
-            background: #1a2332;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid #2a3a4a;
-        }
-        .task-list-item:hover { border-color: var(--role-member); }
-        .task-link { color: var(--text-primary); text-decoration: none; font-weight: 600; }
-        .task-link:hover { color: var(--role-member); }
-
-        .badge-status {
-            font-size: 0.7rem;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        .badge-new { background: var(--info); color: #000; }
-        .badge-progress { background: var(--accent-core); color: white; }
-        .badge-review { background: var(--warning); color: #000; }
-        .badge-done { background: var(--success); color: white; }
-        .badge-blocked { background: var(--danger); color: white; }
-        .badge-overdue { background: var(--danger); color: white; font-size: 0.7rem; padding: 4px 8px; border-radius: 20px; }
-
-        .profile-field { margin-bottom: 16px; }
-        .profile-label { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
-        .profile-value { color: var(--text-primary); font-size: 1rem; }
-
-        .btn-outline-light { border-color: #2a3a4a; color: var(--text-secondary); }
-        .btn-outline-light:hover { background: var(--role-member); border-color: var(--role-member); color: white; }
-        .btn-outline-danger { border-color: var(--danger); color: var(--danger); }
-        .btn-outline-danger:hover { background: var(--danger); color: white; }
-
-        hr { border-color: #2a3a4a; }
-        .alert-overdue { background: #1a0f0f; border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-dark mb-4">
-        <div class="container">
-            <span class="navbar-brand">📋 Управление проектами</span>
-            <div>
-                <a href="{% url 'notifications' %}" class="btn btn-outline-light btn-sm me-2 position-relative">
-                🔔
-                {% if unread_count > 0 %}
-                    <span style="background: var(--danger); color: white; border-radius: 50%; padding: 1px 6px; font-size: 0.7rem; position: absolute; top: -5px; right: -5px;">{{ unread_count }}</span>
-                {% endif %}
-            </a>
-                <a href="{% url 'kanban-board' %}" class="btn btn-outline-light btn-sm me-2">Доска</a>
-<a href="{% url 'project-list' %}" class="btn btn-outline-light btn-sm me-2">Проекты</a>
-<a href="{% url 'personal-dashboard' %}" class="btn btn-outline-light btn-sm me-2">Кабинет</a>
+<div class="dashboard-grid">
+    <!-- Профиль -->
+    <div class="profile-col">
+        <div class="card">
+            <h3>Профиль</h3>
+            <div class="profile-field">
+                <div class="profile-label">Имя</div>
+                <div class="profile-value">{{ user.get_full_name|default:"Не указано" }}</div>
             </div>
-        </div>
-    </nav>
-
-    <div class="container">
-        <h2 class="page-title mb-4">👤 Личный кабинет</h2>
-
-        <div class="row">
-            <!-- ПРОФИЛЬ -->
-            <div class="col-md-4 mb-4">
-                <div class="card">
-                    <div class="card-header">👤 Профиль</div>
-                    <div class="card-body">
-                        <div class="profile-field">
-                            <div class="profile-label">Имя</div>
-                            <div class="profile-value">{{ user.get_full_name|default:"Не указано" }}</div>
-                        </div>
-                        <div class="profile-field">
-                            <div class="profile-label">Логин</div>
-                            <div class="profile-value">{{ user.username }}</div>
-                        </div>
-                        <div class="profile-field">
-                            <div class="profile-label">Email</div>
-                            <div class="profile-value">{{ user.email|default:"Не указан" }}</div>
-                        </div>
-                        <div class="profile-field">
-                            <div class="profile-label">Дата регистрации</div>
-                            <div class="profile-value">{{ user.date_joined|date:"d.m.Y" }}</div>
-                        </div>
-                        <hr>
-                        <a href="/admin/password_change/" class="btn btn-outline-light btn-sm w-100 mb-2">🔒 Сменить пароль</a>
-                        <form method="post" action="{% url 'logout' %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-outline-danger btn-sm w-100">🚪 Выйти</button>
-                        </form>
-                    </div>
-                </div>
+            <div class="profile-field">
+                <div class="profile-label">Логин</div>
+                <div class="profile-value">{{ user.username }}</div>
             </div>
-
-            <!-- СТАТИСТИКА И ЗАДАЧИ -->
-            <div class="col-md-8">
-                <!-- Общая сводка -->
-                <!-- Сводка с диаграммой -->
-<!-- Сводка с диаграммой -->
-<div class="card mb-4">
-    <div class="card-header">📊 Распределение задач</div>
-    <div class="card-body">
-        <div class="row align-items-center">
-            <div class="col-md-5">
-                <canvas id="taskChart" width="200" height="200"></canvas>
-                <small style="color: var(--text-muted); display: block; text-align: center; margin-top: 5px;">
-    Все задачи за всё время
-</small>
+            <div class="profile-field">
+                <div class="profile-label">Email</div>
+                <div class="profile-value">{{ user.email|default:"Не указан" }}</div>
             </div>
-            <div class="col-md-7">
-                <div class="d-flex justify-content-between mb-2">
-                    <span style="color: var(--text-main);"><strong style="font-size: 1.3rem;">{{ total_tasks }}</strong> всего задач</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span style="color: var(--success);">✅ Выполнено</span>
-                    <strong style="color: var(--success);">{{ completed_tasks }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span style="color: var(--danger);">⚠️ Просрочено</span>
-                    <strong style="color: var(--danger);">{{ overdue_tasks.count }}</strong>
-                </div>
-                <hr style="border-color: #2a3a4a; margin: 10px 0;">
-                {% for status in statuses %}
-<div class="d-flex justify-content-between mb-1 align-items-center">
-    <span style="color: var(--text-secondary);">
-        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-            {% if status.name == 'Новая' %}background: #1ABC9C;
-            {% elif status.name == 'В работе' %}background: #3498DB;
-            {% elif status.name == 'На проверке' %}background: #F39C12;
-            {% elif status.name == 'Готово' %}background: #27AE60;
-            {% else %}background: #E74C3C;{% endif %}
-            margin-right: 6px; vertical-align: middle;"></span>
-        {{ status.name }}
-    </span>
-    <span style="font-weight: 600; color: var(--text-main);">({{ status.task_count }})</span>
-</div>
-{% endfor %}
+            <div class="profile-field">
+                <div class="profile-label">Дата регистрации</div>
+                <div class="profile-value">{{ user.date_joined|date:"d.m.Y" }}</div>
             </div>
+            <a href="{% url 'change-password' %}" class="btn btn-outline" style="width: 100%; text-align: center; margin-top: 8px;">Сменить пароль</a>
+            <form method="post" action="{% url 'change-username' %}" style="margin-top: 8px;">
+    {% csrf_token %}
+    <input type="text" name="username" class="form-input" value="{{ user.username }}" style="margin-bottom: 8px;">
+    <button type="submit" class="btn btn-outline btn-sm" style="width: 100%;">Сменить логин</button>
+</form>
         </div>
     </div>
-</div>
 
-                <!-- Просроченные -->
-                {% if overdue_tasks %}
-                <div class="alert-overdue p-3 mb-4">
-                    <strong>⚠️ Просроченные задачи:</strong>
-                    {% for task in overdue_tasks %}
-                        <div class="mt-2 d-flex justify-content-between align-items-center">
-                            <div>
-                                <a href="{% url 'task-detail' task.id %}" style="color: var(--danger);">{{ task.title }}</a>
-                                <small style="color: var(--text-muted);"> — {{ task.planned_end_date|date:"d.m.Y" }}</small>
-                            </div>
-                            <a href="{% url 'task-detail' task.id %}" class="btn btn-sm" style="border: 1px solid var(--danger); color: var(--danger);">→</a>
-                        </div>
-                    {% endfor %}
+    <!-- Статистика -->
+    <div class="stats-col">
+        <!-- Просроченные -->
+        {% if overdue_tasks %}
+        <div class="overdue-box">
+            <strong style="color: #f0b065;">Внимание: просроченные задачи</strong>
+            {% for task in overdue_tasks %}
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <a href="{% url 'task-detail' task.id %}" style="color: var(--danger); text-decoration: none; font-size: 13px;">{{ task.title }}</a>
+                    <span style="font-size: 11px; color: var(--text-muted);">{{ task.planned_end_date|date:"d.m.Y" }}</span>
                 </div>
-                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
 
-                <!-- Все задачи -->
-                <div class="card">
-                    <div class="card-header">📋 Все мои задачи</div>
-                    <div class="card-body">
-                        {% for task in user_tasks %}
-                        <div class="task-list-item">
-                            <div>
-                                <a href="{% url 'task-detail' task.id %}" class="task-link">{{ task.title }}</a>
-                                <br>
-                                <a href="{% url 'project-detail' task.project.id %}" style="color: var(--accent-core); text-decoration: none;">
-    📁 {{ task.project.name }}
-</a>
-                            </div>
-                            <span class="badge-status
-                                {% if task.status.name == 'Новая' %}badge-new
-                                {% elif task.status.name == 'В работе' %}badge-progress
-                                {% elif task.status.name == 'На проверке' %}badge-review
-                                {% elif task.status.name == 'Готово' %}badge-done
-                                {% else %}badge-blocked{% endif %}">
-                                {{ task.status.name }}
-                            </span>
+        <!-- Диаграмма + сводка -->
+        <div class="card">
+            <h3>Распределение задач</h3>
+            <div style="display: flex; align-items: center; gap: 24px;">
+                <div class="chart-wrap">
+                    {% if total_tasks > 0 %}
+    <canvas id="taskChart" width="200" height="200"></canvas>
+{% else %}
+    <p style="text-align: center; color: var(--text-muted); padding: 20px;">Нет задач для отображения</p>
+{% endif %}
+                </div>
+                <div style="flex: 1;">
+                    <div class="stat-summary">
+                        <div class="stat-big">
+                            <div class="stat-number" style="color: var(--primary);">{{ total_tasks }}</div>
+                            <div class="stat-sub">всего задач</div>
                         </div>
-                        {% empty %}
-                        <p style="color: var(--text-muted);">У вас пока нет задач</p>
+                        <div class="stat-big">
+                            <div class="stat-number" style="color: var(--success);">{{ completed_tasks }}</div>
+                            <div class="stat-sub">выполнено</div>
+                        </div>
+                        <div class="stat-big">
+                            <div class="stat-number" style="color: var(--danger);">{{ overdue_tasks.count }}</div>
+                            <div class="stat-sub">просрочено</div>
+                        </div>
+                    </div>
+                    <div class="stat-list">
+                        {% for status in statuses %}
+                        <div class="stat-row">
+                            <span>
+                                <span class="stat-dot" style="background:
+    {% if status.name == 'Новая' %}#1ABC9C
+    {% elif status.name == 'В работе' %}#3498DB
+    {% elif status.name == 'На проверке' %}#f0b065
+    {% elif status.name == 'Готово' %}#6dbf8b
+    {% elif status.name == 'Запланирована' %}#7ec8c3
+    {% else %}#e0857b{% endif %};"></span>
+                                {{ status.name }}
+                            </span>
+                            <span style="font-weight: 600;">{{ status.task_count }}</span>
+                        </div>
                         {% endfor %}
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Список задач -->
+        <div class="card">
+            <h3>Все задачи</h3>
+            {% for task in user_tasks %}
+            <div class="task-mini">
+                <div>
+                    <a href="{% url 'task-detail' task.id %}">{{ task.title }}</a>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                        {{ task.planned_end_date|date:"d.m.Y" }} &middot; {{ task.project.name }}
+                    </div>
+                </div>
+                <span class="badge-status
+                    {% if task.status.name == 'Новая' %}status-new
+                    {% elif task.status.name == 'В работе' %}status-work
+                    {% elif task.status.name == 'На проверке' %}status-review
+                    {% elif task.status.name == 'Готово' %}status-done
+                    {% elif task.status.name == 'Запланирована' %}status-planned
+                    {% else %}status-blocked{% endif %}">
+                    {{ task.status.name }}
+                </span>
+            </div>
+            {% empty %}
+            <p style="color: var(--text-muted); font-size: 13px;">Нет задач</p>
+            {% endfor %}
+        </div>
     </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const ctx = document.getElementById('taskChart').getContext('2d');
 
-    const taskData = [{% for status in statuses %}{{ status.task_count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-    const hasData = taskData.some(v => v > 0);
-
-    const data = {
-        datasets: [{
-            data: hasData ? taskData : [1, 1, 1, 1, 1],
-            backgroundColor: [
-                '#1ABC9C',
-                '#3498DB',
-                '#F39C12',
-                '#27AE60',
-                '#E74C3C',
-            ],
-            borderColor: '#0A0F14',
-            borderWidth: 2,
-        }]
-    };
+    const labels = [{% for status in statuses %}'{{ status.name }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+    const taskData = [{% for status in statuses %}{{ status.task_count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+    const colors = [
+        '#7ec8c3',  // Запланирована
+        '#1ABC9C',  // Новая
+        '#3498DB',  // В работе
+        '#f0b065',  // На проверке
+        '#6dbf8b',  // Готово
+    ];
 
     new Chart(ctx, {
         type: 'doughnut',
-        data: data,
+        data: {
+            labels: labels,
+            datasets: [{
+                data: taskData.some(v => v > 0) ? taskData : [],
+                backgroundColor: colors.slice(0, labels.length),
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
             plugins: {
                 legend: { display: false },
                 tooltip: {
-    callbacks: {
-        label: function(context) {
-            const labels = ['Новая', 'В работе', 'На проверке', 'Готово', 'Заблокирована'];
-            return labels[context.dataIndex] + ': ' + context.parsed;
-        }
-    }
-}
+                    callbacks: {
+                        label: function(context) {
+                            return labels[context.dataIndex] + ': ' + context.parsed;
+                        }
+                    }
+                }
             }
         }
     });
 </script>
-</body>
-</html>
+{% endblock %}

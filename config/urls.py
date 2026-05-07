@@ -17,13 +17,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
-from resource_planning.views import redirect_by_role
+from task_management.views import redirect_by_role
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('tasks/', include('task_management.urls')),
     path('resource/', include('resource_planning.urls')),
-    path('logout/', auth_views.LogoutView.as_view(next_page='/admin/'), name='logout'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='/accounts/login/'), name='logout'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('accounts/redirect/', redirect_by_role, name='redirect_by_role'),
+    path('', redirect_by_role, name='home'),
 ]
