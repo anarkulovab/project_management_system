@@ -10,14 +10,17 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         # 1. Статусы задач
+        # 1. Статусы задач
         statuses = [
-            {'name': 'В работе', 'order': 1},
-            {'name': 'На проверке', 'order': 2},
-            {'name': 'Готово', 'order': 3},
+            {'name': 'Запланирована', 'order': 1},
+            {'name': 'Новая', 'order': 2},
+            {'name': 'В работе', 'order': 3},
+            {'name': 'На проверке', 'order': 4},
+            {'name': 'Готово', 'order': 5},
         ]
         for s in statuses:
             TaskStatus.objects.get_or_create(name=s['name'], defaults={'order': s['order']})
-        self.stdout.write(self.style.SUCCESS('✅ Статусы задач созданы'))
+        self.stdout.write(self.style.SUCCESS('Статусы задач созданы'))
 
         # 2. Пользователи
         user1, _ = User.objects.get_or_create(username='ivanov')
@@ -51,9 +54,10 @@ class Command(BaseCommand):
         # 5. Задачи
         Task.objects.create(
             title='Разработка API для проектов',
+            planned_start_date=timezone.now() - timezone.timedelta(days=2),
+            planned_end_date=timezone.now() + timezone.timedelta(days=7),
             description='Реализовать эндпоинты для управления проектами',
             priority='high',
-            planned_end_date=timezone.now() + timezone.timedelta(days=7),
             status=in_progress,
             assigned_to=user1,
             author=user2,
@@ -61,9 +65,10 @@ class Command(BaseCommand):
         )
         Task.objects.create(
             title='Верстка главной страницы',
+            planned_start_date=timezone.now() - timezone.timedelta(days=2),
+            planned_end_date=timezone.now() + timezone.timedelta(days=7),
             description='Сверстать главную страницу по макету',
             priority='medium',
-            planned_end_date=timezone.now() + timezone.timedelta(days=3),
             status=on_review,
             assigned_to=user1,
             author=user2,
@@ -71,9 +76,10 @@ class Command(BaseCommand):
         )
         Task.objects.create(
             title='Настройка базы данных',
+            planned_start_date=timezone.now() - timezone.timedelta(days=2),
+            planned_end_date=timezone.now() + timezone.timedelta(days=7),
             description='Создать структуру БД и применить миграции',
             priority='high',
-            planned_end_date=timezone.now() - timezone.timedelta(days=1),
             status=done,
             assigned_to=user2,
             author=user2,
