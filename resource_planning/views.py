@@ -414,10 +414,10 @@ def add_employee(request):
 def redirect_by_role(request):
     user = request.user
     if user.groups.filter(name='Руководитель проекта').exists():
-        return redirect('dashboard')
+        return redirect('/resource/')
     elif user.groups.filter(name='Исполнитель').exists():
         return redirect('/tasks/board')
     elif user.groups.filter(name='Директор').exists():
-        return redirect('/tasks/')  # позже — десктоп Насти
+        return redirect('/tasks/board')  # позже — десктоп Насти
 
     return redirect('dashboard')

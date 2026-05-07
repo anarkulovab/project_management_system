@@ -578,18 +578,3 @@ def change_username(request):
                 messages.success(request, 'Логин успешно изменён.')
                 return redirect('personal-dashboard')
     return redirect('personal-dashboard')
-
-
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect
-
-
-@login_required
-def redirect_by_role(request):
-    user = request.user
-    is_manager = user.groups.filter(name='Руководитель проекта').exists()
-
-    if is_manager or user.is_staff:
-        return redirect('/resource/')  # ← правильный префикс Бегимай
-    else:
-        return redirect('kanban-board')
