@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User, Group
 from django.shortcuts import redirect
-from .models import Project, TaskAssignment, KPI, ProjectStatus, UserAbsence, Priority, Employee
+from .models import Project, TaskAssignment, KPI, ProjectStatus, UserAbsence, Priority, Employee, AbsenceType
 from task_management.models import Task, TaskStatus, Notification
 from .forms import ProjectForm
 import json
@@ -106,14 +106,23 @@ def project_list(request):
 # Создание проекта
 def project_create(request):
     if request.method == 'POST':
-        form = ProjectForm(request.POST)
+        form = ProjectForm(request.POST, user=request.user)
         if form.is_valid():
             project = form.save(commit=False)
+            if project.start_date_plan and project.start_date_plan < date.today():
+                messages.error(request, 'Плановая дата начала не может быть в прошлом')
+                return redirect(request.META.get('HTTP_REFERER', 'project_list'))
             default_status = ProjectStatus.objects.get(name='Активен')
             project.status = default_status
             project.manager = request.user
             project.save()
             form.save_m2m()  # сохраняет связи ManyToMany (participants)
+            for participant in project.participants.all():
+                Notification.objects.create(
+                    user=participant,
+                    task=None,
+                    message=f'{request.user.get_full_name() or request.user.username} добавил вас в проект «{project.name}».'
+                )
             return redirect('project_detail', project_id=project.id)
     else:
         return redirect('project_list')
@@ -169,9 +178,9 @@ from datetime import datetime
 @login_required
 @csrf_exempt
 def task_create_api(request, project_id):
+    """API для создания задачи через FullCalendar."""
     if request.method != 'POST':
         return JsonResponse({'error': 'Метод не поддерживается'}, status=405)
-
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -180,15 +189,23 @@ def task_create_api(request, project_id):
     title = data.get('title', 'Без названия')
     start_str = data.get('start')
     end_str = data.get('end')
+    description = data.get('description', '')
+    planned_hours = int(data.get('planned_hours', 0))
 
     project = get_object_or_404(Project, id=project_id)
     default_status = TaskStatus.objects.filter(name='Новая').first()
 
+    # Преобразуем строки в datetime
     start_date = datetime.fromisoformat(start_str) if start_str else None
     end_date = datetime.fromisoformat(end_str) if end_str else None
 
+    # Проверка: нельзя создать задачу с прошедшей датой начала
+    if start_date and start_date < timezone.now():
+        return JsonResponse({'error': 'Нельзя создать задачу с прошедшей датой начала'}, status=400)
+
     task = Task.objects.create(
         title=title,
+        description=description,
         project=project,
         status=default_status,
         priority=data.get('priority', 'medium'),
@@ -198,33 +215,77 @@ def task_create_api(request, project_id):
     )
 
     assignee_id = data.get('assignee_id')
+    assignee = None
+
     if assignee_id:
         try:
-            assignee = User.objects.get(id=assignee_id)
+            assignee = User.objects.get(id=int(assignee_id))
             task.assigned_to = assignee
             task.save()
-
-            # Создаём назначение для расчёта загрузки
-            TaskAssignment.objects.create(
-                task=task,
-                user=assignee,
-                planned_hours=data.get('planned_hours', 0),
-            )
-        except User.DoesNotExist:
+        except (User.DoesNotExist, ValueError):
             pass
 
-    return JsonResponse({
+    # Создаём назначение с плановыми часами
+    if assignee and planned_hours > 0:
+        TaskAssignment.objects.create(
+            task=task,
+            user=assignee,
+            planned_hours=planned_hours,
+        )
+
+    # Проблема 21: проверка загрузки
+    warning_msg = None
+    if assignee and planned_hours > 0:
+        # Определяем границы недели, в которую попадает start_date
+        base_date = start_date if start_date else timezone.now()
+        week_start = base_date - timedelta(days=base_date.weekday())
+        week_end = week_start + timedelta(days=6)
+
+        # Недельная норма сотрудника
+        emp_rel = Employee.objects.filter(manager=request.user, employee=assignee).first()
+        weekly_norm = emp_rel.weekly_work_hours if emp_rel else 40
+
+        # Текущая загрузка сотрудника на эту неделю (без учёта новой задачи)
+        current_load = TaskAssignment.objects.filter(
+            user=assignee,
+            task__planned_end_date__gte=week_start,
+            task__planned_end_date__lte=week_end
+        ).exclude(task=task).aggregate(total=models.Sum('planned_hours'))['total'] or 0
+
+        new_total = current_load + planned_hours
+
+        if new_total > weekly_norm:
+            warning_msg = (
+                f'Внимание: загрузка {assignee.get_full_name() or assignee.username} '
+                f'на неделе {week_start.strftime("%d.%m")}–{week_end.strftime("%d.%m")} '
+                f'составит {new_total} ч при норме {weekly_norm} ч.'
+            )
+
+    # Уведомление исполнителю о новой задаче
+    if assignee:
+        Notification.objects.create(
+            user=assignee,
+            task=task,
+            message=f'{request.user.get_full_name() or request.user.username} назначил вам задачу «{task.title}» в проекте «{project.name}».'
+        )
+
+    response_data = {
         'id': task.id,
         'title': task.title,
         'start': task.planned_start_date.isoformat() if task.planned_start_date else task.created_at.isoformat(),
         'end': task.planned_end_date.isoformat() if task.planned_end_date else None,
-        'color': '#3498DB',
+        'color': '#f0b065' if warning_msg else '#3498DB',
         'extendedProps': {
             'status': task.status.name if task.status else 'Новая',
             'assignee': task.assigned_to.get_full_name() if task.assigned_to else 'Не назначен',
             'priority': task.priority,
         }
-    }, status=201)
+    }
+
+    if warning_msg:
+        response_data['warning'] = warning_msg
+
+    return JsonResponse(response_data, status=201)
 
 @login_required
 def workload(request):
@@ -237,20 +298,73 @@ def workload(request):
         week_start = week_start + timedelta(weeks=offset)
         week_end = week_end + timedelta(weeks=offset)
 
-    # Фильтр по проекту
     project_id = request.GET.get('project_id', '')
     selected_project = None
     if project_id:
         selected_project = get_object_or_404(Project, id=project_id)
-        users = User.objects.filter(participating_projects=selected_project).distinct()
-    else:
-        employees = Employee.objects.filter(manager=request.user).values_list('employee', flat=True)
-        users = User.objects.filter(id__in=employees)
 
-    workload_data = []
-    total_planned = 0
-    total_actual = 0
+    # Получаем сотрудников руководителя
+    employee_ids = Employee.objects.filter(manager=request.user).values_list('employee_id', flat=True)
+    users = User.objects.filter(id__in=employee_ids)
 
+    # Общая статистика за весь период
+    total_data = []
+    grand_planned = 0
+    grand_actual = 0
+
+    for user in users:
+        emp_rel = Employee.objects.get(manager=request.user, employee=user)
+        weekly_norm = emp_rel.weekly_work_hours
+
+        # Все назначения сотрудника
+        assignments = TaskAssignment.objects.filter(user=user)
+        if project_id:
+            assignments = assignments.filter(task__project_id=project_id)
+
+        total_planned = assignments.aggregate(total=models.Sum('planned_hours'))['total'] or 0
+        total_actual = assignments.aggregate(total=models.Sum('actual_hours'))['total'] or 0
+
+        # Определяем временной диапазон: от самой ранней задачи до самой поздней
+        task_dates = Task.objects.filter(
+            assignments__user=user
+        ).aggregate(
+            min_date=models.Min('planned_start_date'),
+            max_date=models.Max('planned_end_date')
+        )
+        min_date = task_dates['min_date']
+        max_date = task_dates['max_date']
+
+        if min_date and max_date and min_date != max_date:
+            total_weeks = ((max_date - min_date).days // 7) + 1
+        else:
+            total_weeks = 1
+
+        available_total = weekly_norm * total_weeks
+        load_percent_total = int((total_planned / available_total) * 100) if available_total > 0 else 0
+
+        if load_percent_total > 100:
+            load_class = 'danger'
+        elif load_percent_total >= 80:
+            load_class = 'warning'
+        else:
+            load_class = 'success'
+
+        grand_planned += total_planned
+        grand_actual += total_actual
+
+        total_data.append({
+            'user': user,
+            'planned': total_planned,
+            'actual': total_actual,
+            'available': available_total,
+            'load_percent': load_percent_total,
+            'load_class': load_class,
+            'weeks': total_weeks,
+            'weekly_norm': weekly_norm,
+        })
+
+    # Понедельная детализация
+    weekly_data = []
     for user in users:
         assignments = TaskAssignment.objects.filter(
             user=user,
@@ -263,11 +377,11 @@ def workload(request):
         planned = assignments.aggregate(total=models.Sum('planned_hours'))['total'] or 0
         actual = assignments.aggregate(total=models.Sum('actual_hours'))['total'] or 0
 
-        available = 40
+        emp_rel = Employee.objects.get(manager=request.user, employee=user)
+        available = emp_rel.weekly_work_hours
+
         absences = UserAbsence.objects.filter(
-            user=user,
-            start_date__lte=week_end,
-            end_date__gte=week_start
+            user=user, start_date__lte=week_end, end_date__gte=week_start
         )
         for absence in absences:
             absence_start = max(absence.start_date, week_start)
@@ -280,36 +394,32 @@ def workload(request):
         else:
             load_percent = 0
 
-        total_planned += planned
-        total_actual += actual
-
         if load_percent > 100:
-            load_class = 'danger'
+            w_class = 'danger'
         elif load_percent >= 80:
-            load_class = 'warning'
+            w_class = 'warning'
         else:
-            load_class = 'success'
+            w_class = 'success'
 
-        workload_data.append({
+        weekly_data.append({
             'user': user,
             'planned': planned,
             'actual': actual,
             'available': available,
             'load_percent': load_percent,
-            'load_class': load_class,
+            'load_class': w_class,
         })
 
-    avg_load = int(total_planned / (len(users) * 40) * 100) if users else 0
-
-    # Список проектов для фильтра
-    projects = Project.objects.filter(manager=request.user) if request.user.is_authenticated else Project.objects.all()
+    projects = Project.objects.filter(manager=request.user)
 
     context = {
-        'workload_data': workload_data,
+        'total_data': total_data,
+        'weekly_data': weekly_data,
         'week_start': week_start,
         'week_end': week_end,
         'offset': offset,
-        'avg_load': avg_load,
+        'grand_planned': grand_planned,
+        'grand_actual': grand_actual,
         'projects': projects,
         'selected_project': selected_project,
     }
@@ -335,15 +445,16 @@ def project_edit(request, project_id):
     project = get_object_or_404(Project, id=project_id)
 
     if request.method == 'POST':
-        form = ProjectForm(request.POST, instance=project)
+        form = ProjectForm(request.POST, instance=project, user=request.user)
         if form.is_valid():
             form.save()
             return redirect('project_detail', project_id=project.id)
     else:
-        form = ProjectForm(instance=project)
+        form = ProjectForm(instance=project, user=request.user)  # GET
 
     priorities = Priority.objects.all()
-    users = User.objects.filter(is_active=True, is_superuser=False)
+    employee_ids = Employee.objects.filter(manager=request.user).values_list('employee_id', flat=True)
+    users = User.objects.filter(id__in=employee_ids)
 
     context = {
         'form': form,
@@ -355,19 +466,60 @@ def project_edit(request, project_id):
 
 @login_required
 def team(request):
-    """Страница команды руководителя."""
-    employees = Employee.objects.filter(manager=request.user).select_related('employee')
-    context = {
-        'employees': employees,
-    }
     project_id = request.GET.get('project_id', '')
+    employees = Employee.objects.filter(manager=request.user).select_related('employee')
+
     if project_id:
-        employees = Employee.objects.filter(
-            manager=request.user,
-            employee__participating_projects__id=project_id
-        ).select_related('employee').distinct()
-    else:
-        employees = Employee.objects.filter(manager=request.user).select_related('employee')
+        employees = employees.filter(employee__participating_projects__id=project_id)
+
+    team_data = []
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+
+    for emp in employees:
+        user = emp.employee
+
+        # Задачи по статусам
+        tasks_in_work = Task.objects.filter(assigned_to=user, status__name='В работе').count()
+        tasks_on_review = Task.objects.filter(assigned_to=user, status__name='На проверке').count()
+        tasks_done = Task.objects.filter(assigned_to=user, status__name='Готово').count()
+        tasks_overdue = Task.objects.filter(
+            assigned_to=user,
+            planned_end_date__lt=timezone.now()
+        ).exclude(status__name='Готово').count()
+
+        # Проекты сотрудника
+        projects = Project.objects.filter(participants=user)
+
+        # Загрузка на текущей неделе
+        planned = TaskAssignment.objects.filter(
+            user=user,
+            task__planned_end_date__gte=week_start,
+            task__planned_end_date__lte=week_end
+        ).aggregate(total=models.Sum('planned_hours'))['total'] or 0
+
+        available = 40
+        load_percent = int((planned / available) * 100) if available > 0 else 0
+
+        team_data.append({
+            'user': user,
+            'tasks_in_work': tasks_in_work,
+            'tasks_on_review': tasks_on_review,
+            'tasks_done': tasks_done,
+            'tasks_overdue': tasks_overdue,
+            'projects': projects,
+            'load_percent': load_percent,
+        })
+
+    projects = Project.objects.filter(manager=request.user)
+    absence_types = AbsenceType.objects.all()
+    context = {
+        'team_data': team_data,
+        'projects': projects,
+        'current_project_id': project_id,
+        'absence_types': absence_types,
+    }
     return render(request, 'resource_planning/team.html', context)
 
 
@@ -414,7 +566,8 @@ def add_employee(request):
             Employee.objects.create(manager=request.user, employee=user)
             messages.success(
                 request,
-                f'Сотрудник создан. Логин: {username}, Пароль: {password}. Передайте эти данные сотруднику.'
+                f'Сотрудник создан. Логин: {username}, Пароль: {password}. '
+                f'Эти данные показаны только один раз. Скопируйте их сейчас и передайте сотруднику.'
             )
 
         return redirect('team')
@@ -544,14 +697,18 @@ def reject_executor_change(request, request_id):
     messages.success(request, 'Запрос на смену исполнителя отклонён.')
     return redirect('task_detail_view', task_id=req.task.id)
 
+
 def assign_executor(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     if request.method == 'POST':
         executor_id = request.POST.get('executor_id')
         if executor_id:
-            employees = Employee.objects.filter(manager=request.user).values_list('employee', flat=True)
-            users = User.objects.filter(id__in=employees)
-            new_executor = get_object_or_404(User, id__in=employees)
+            try:
+                new_executor = User.objects.get(id=int(executor_id))
+            except (User.DoesNotExist, ValueError):
+                messages.error(request, 'Исполнитель не найден.')
+                return redirect('task_detail_view', task_id=task.id)
+
             old_executor = task.assigned_to
             task.assigned_to = new_executor
             task.save()
@@ -570,4 +727,55 @@ def assign_executor(request, task_id):
                 )
 
             messages.success(request, 'Исполнитель назначен.')
+        else:
+            messages.error(request, 'Не выбран исполнитель.')
     return redirect('task_detail_view', task_id=task.id)
+
+@login_required
+def profile(request):
+    return render(request, 'resource_planning/profile.html')
+
+@login_required
+def project_delete(request, project_id):
+    project = get_object_or_404(Project, id=project_id, manager=request.user)
+    if request.method == 'POST':
+        project.delete()
+        messages.success(request, f'Проект «{project.name}» удалён.')
+        return redirect('project_list')
+    return render(request, 'resource_planning/project_delete.html', {'project': project})
+
+
+def add_absence(request):
+    if request.method == 'POST':
+        user_id = request.POST.get('user_id')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        absence_type_id = request.POST.get('absence_type')
+        reason = request.POST.get('reason', '')
+
+        user = get_object_or_404(User, id=user_id)
+        absence_type = get_object_or_404(AbsenceType, id=absence_type_id)
+
+        UserAbsence.objects.create(
+            user=user,
+            start_date=start_date,
+            end_date=end_date,
+            absence_type=absence_type,
+            reason=reason,
+        )
+
+        messages.success(request, f'Отсутствие для {user.get_full_name() or user.username} добавлено.')
+
+    return redirect('team')
+
+def employee_detail(request, employee_id):
+    emp_rel = get_object_or_404(Employee, manager=request.user, employee_id=employee_id)
+    user = emp_rel.employee
+    tasks = Task.objects.filter(assigned_to=user).select_related('project', 'status')
+    projects = Project.objects.filter(participants=user)
+    context = {
+        'employee_user': user,
+        'tasks': tasks,
+        'projects': projects,
+    }
+    return render(request, 'resource_planning/employee_detail.html', context)

@@ -1,11 +1,11 @@
 from django import forms
-from .models import Project, Priority, ProjectStatus
+from .models import Project, Priority, ProjectStatus, Employee
 from task_management.models import Task, TaskStatus
 from django.contrib.auth.models import User
 
 class ProjectForm(forms.ModelForm):
     participants = forms.ModelMultipleChoiceField(
-        queryset=User.objects.filter(is_active=True, is_superuser=False),
+        queryset=User.objects.none(),
         required=False,
         widget=forms.CheckboxSelectMultiple,
         label='Участники проекта'
@@ -14,42 +14,38 @@ class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
         fields = [
-            'name',
-            'description',
-            'start_date_plan',
-            'end_date_plan',
-            'priority',
-            'participants',
+            'name', 'description',
+            'start_date_plan', 'end_date_plan',
+            'start_date_fact', 'end_date_fact',
+            'status', 'priority', 'participants',
         ]
         widgets = {
-            'name': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Название проекта'
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'form-textarea',
-                'rows': 3,
-                'placeholder': 'Цели, задачи, ожидаемые результаты'
-            }),
-            'start_date_plan': forms.DateInput(attrs={
-                'class': 'form-input',
-                'type': 'date'
-            }),
-            'end_date_plan': forms.DateInput(attrs={
-                'class': 'form-input',
-                'type': 'date'
-            }),
-            'priority': forms.Select(attrs={
-                'class': 'form-select'
-            }),
+            'name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Название проекта'}),
+            'description': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3, 'placeholder': 'Цели, задачи, ожидаемые результаты'}),
+            'start_date_plan': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'end_date_plan': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'start_date_fact': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'end_date_fact': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'priority': forms.Select(attrs={'class': 'form-select'}),
         }
         labels = {
             'name': 'Название проекта',
             'description': 'Описание',
             'start_date_plan': 'Плановая дата начала',
             'end_date_plan': 'Плановая дата окончания',
+            'start_date_fact': 'Фактическая дата начала',
+            'end_date_fact': 'Фактическая дата окончания',
             'priority': 'Приоритет',
         }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            employee_ids = Employee.objects.filter(manager=user).values_list('employee_id', flat=True)
+            self.fields['participants'].queryset = User.objects.filter(id__in=employee_ids)
+            self.fields['participants'].label_from_instance = lambda obj: obj.get_full_name() or obj.username
 
 class TaskCreateForm(forms.ModelForm):
     class Meta:

@@ -21,4 +21,8 @@ urlpatterns = [
     path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
     path('change-request/<int:request_id>/reject/', views.reject_executor_change, name='reject_change'),
     path('task/<int:task_id>/assign/', views.assign_executor, name='assign_executor'),
+    path('profile/', views.profile, name='profile'),
+    path('projects/<int:project_id>/delete/', views.project_delete, name='project_delete'),
+    path('team/add-absence/', views.add_absence, name='add_absence'),
+    path('team/<int:employee_id>/', views.employee_detail, name='employee_detail'),
 ]

@@ -152,7 +152,11 @@
         <tbody>
             {% for project in project_list %}
             <tr>
-                <td style="font-weight: 500;">{{ project.name }}</td>
+                <td>
+                    <a href="{% url 'project_detail' project.id %}" style="font-weight: 500; color: var(--text-heading); text-decoration: none;">
+                        {{ project.name }}
+                    </a>
+                </td>
                 <td>
                     {% if project.status.name == 'Активен' %}
                         <span class="badge badge-active">{{ project.status.name }}</span>

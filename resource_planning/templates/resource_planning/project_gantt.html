@@ -18,6 +18,7 @@
         box-shadow: var(--shadow);
     }
 
+
     /* Переопределение стилей FullCalendar под светлую тему */
     .fc {
         --fc-border-color: #e8e8f0;
@@ -145,6 +146,11 @@
         </div>
 
         <div class="form-group">
+            <label class="form-label" for="task-description">Описание</label>
+            <textarea id="task-description" class="form-textarea" rows="2" placeholder="Описание задачи"></textarea>
+        </div>
+
+        <div class="form-group">
             <label class="form-label" for="task-priority">Приоритет</label>
             <select id="task-priority" class="form-select">
                 <option value="low">Низкий</option>
@@ -162,6 +168,11 @@
                     <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
                 {% endfor %}
             </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="task-hours">Плановые часы</label>
+            <input type="number" id="task-hours" class="form-input" placeholder="Например: 8" min="1" max="100">
         </div>
 
         <input type="hidden" id="task-start">
@@ -226,6 +237,8 @@
             start: document.getElementById('task-start').value,
             end: document.getElementById('task-end').value,
             priority: document.getElementById('task-priority').value,
+            description: document.getElementById('task-description').value,
+            planned_hours: document.getElementById('task-hours').value || 0,
         };
 
         var assigneeId = document.getElementById('task-assignee').value;

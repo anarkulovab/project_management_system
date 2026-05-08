@@ -39,6 +39,9 @@
         <p class="page-subtitle" style="margin-top: 2px;">
             <a href="{% url 'project_detail' task.project.id %}" style="color: var(--primary);">← К проекту</a>
         </p>
+        <p class="page-subtitle" style="margin-top: 2px;">
+            <a href="{% url 'notifications_list' %}" style="color: var(--text-secondary);">← К уведомлениям</a>
+        </p>
     </div>
     <button type="button" class="btn btn-primary btn-sm" onclick="openAssignModal()"
             style="display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding: 10px 20px; font-size: 14px; height: auto;">

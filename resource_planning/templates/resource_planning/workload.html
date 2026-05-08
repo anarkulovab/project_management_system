@@ -39,6 +39,8 @@
 
     .sum-card:first-child .value { color: var(--primary); }
     .sum-card:last-child .value  { color: var(--success); }
+    .sum-card:nth-child(2) .value { color: var(--warning); }
+    .sum-card:nth-child(3) .value { color: var(--success); }
 
     /* ===== НАВИГАЦИЯ ПО НЕДЕЛЯМ ===== */
     .week-nav {
@@ -158,53 +160,93 @@
 {% block content %}
 
 <h1 class="page-title">Загрузка команды</h1>
-<p class="page-subtitle">
-    <span>{{ week_start|date:"d.m.Y" }} – {{ week_end|date:"d.m.Y" }}</span>
 
-    <span class="week-nav">
-        <a href="?week_offset={{ offset|add:-1 }}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 18 9 12 15 6"/>
-            </svg>
-        </a>
-        <span>Неделя</span>
-        <a href="?week_offset={{ offset|add:1 }}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 6 15 12 9 18"/>
-            </svg>
-        </a>
-    </span>
+<!-- Фильтр по проекту -->
+<div style="margin-bottom: 20px;">
+    <form method="get" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <input type="hidden" name="week_offset" value="{{ offset }}">
+        <label class="form-label" style="margin-bottom: 0; white-space: nowrap;">Проект:</label>
+        <select name="project_id" class="form-select" style="width: auto; min-width: 220px;" onchange="this.form.submit()">
+            <option value="">— Все проекты —</option>
+            {% for p in projects %}
+                <option value="{{ p.id }}" {% if selected_project and selected_project.id == p.id %}selected{% endif %}>{{ p.name }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
 
-    <!-- Фильтр по проекту -->
-    <div style="margin-bottom: 20px;">
-        <form method="get" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <input type="hidden" name="week_offset" value="{{ offset }}">
-            <label class="form-label" style="margin-bottom: 0; white-space: nowrap;">Проект:</label>
-            <select name="project_id" class="form-select" style="width: auto; min-width: 220px;" onchange="this.form.submit()">
-                <option value="">Все проекты</option>
-                {% for p in projects %}
-                <option value="{{ p.id }}" {% if selected_project and selected_project.id == p.id %}selected{% endif %}>
-                    {{ p.name }}
-                </option>
-                {% endfor %}
-            </select>
-        </form>
-    </div>
-</p>
-
-<!-- ===== Сводные карточки ===== -->
-<div class="summary-cards">
+<!-- ===== ОБЩАЯ ЗАГРУЗКА ЗА ВЕСЬ ПЕРИОД ===== -->
+<h3 style="font-size: 16px; font-weight: 600; color: var(--text-heading); margin-bottom: 12px;">
+    Общая загрузка за весь период
+    {% if selected_project %}· {{ selected_project.name }}{% endif %}
+</h3>
+<!-- Сводная панель -->
+<div class="summary" style="display: flex; gap: 15px; margin-bottom: 24px; flex-wrap: wrap;">
     <div class="sum-card">
         <div class="label">Сотрудников</div>
-        <div class="value">{{ workload_data|length }}</div>
+        <div class="value">{{ total_data|length }}</div>
     </div>
     <div class="sum-card">
-        <div class="label">Средняя загрузка</div>
-        <div class="value">{{ avg_load }}%</div>
+        <div class="label">Всего плановых часов</div>
+        <div class="value">{{ grand_planned }}</div>
+    </div>
+    <div class="sum-card">
+        <div class="label">Всего фактических часов</div>
+        <div class="value">{{ grand_actual }}</div>
     </div>
 </div>
 
-<!-- ===== Таблица загрузки ===== -->
+<div class="table-wrapper" style="margin-bottom: 30px;">
+    <table>
+        <thead>
+            <tr>
+                <th>Сотрудник</th>
+                <th>План, ч</th>
+                <th>Факт, ч</th>
+                <th>Доступно, ч</th>
+                <th>Норма / нед</th>
+                <th>Загрузка</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in total_data %}
+            <tr>
+                <td style="font-weight: 500;">{{ row.user.get_full_name|default:row.user.username }}</td>
+                <td>{{ row.planned }} ч</td>
+                <td>{{ row.actual }} ч</td>
+                <td>{{ row.available }} ч</td>
+                <td>{{ row.weekly_norm }} ч</td>
+                <td>
+                    <span class="load-dot {% if row.load_class == 'danger' %}red{% elif row.load_class == 'warning' %}yellow{% else %}green{% endif %}"
+                          style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px;
+                          background: {% if row.load_class == 'danger' %}var(--danger){% elif row.load_class == 'warning' %}var(--warning){% else %}var(--success){% endif %};">
+                    </span>
+                    {{ row.load_percent }}%
+                    <span class="load-bar-bg" style="display: inline-block; width: 80px; height: 6px; background: #e8e8f0; border-radius: 10px; vertical-align: middle; margin-left: 6px; overflow: hidden;">
+                        <span style="display: block; height: 6px; border-radius: 10px;
+                              width: {% if row.load_percent > 100 %}100{% else %}{{ row.load_percent }}{% endif %}%;
+                              background: {% if row.load_class == 'danger' %}#e0857b{% elif row.load_class == 'warning' %}#f0b065{% else %}#6dbf8b{% endif %};">
+                        </span>
+                    </span>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Нет данных</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ===== ДЕТАЛИЗАЦИЯ ПО НЕДЕЛЯМ ===== -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+    <h3 style="font-size: 16px; font-weight: 600; color: var(--text-heading);">Детализация по неделям</h3>
+    <div class="week-nav">
+        <a href="?week_offset={{ offset|add:-1 }}{% if selected_project %}&project_id={{ selected_project.id }}{% endif %}">←</a>
+        <span>{{ week_start|date:"d.m.Y" }} – {{ week_end|date:"d.m.Y" }}</span>
+        <a href="?week_offset={{ offset|add:1 }}{% if selected_project %}&project_id={{ selected_project.id }}{% endif %}">→</a>
+    </div>
+</div>
+
 <div class="table-wrapper">
     <table>
         <thead>
@@ -217,47 +259,28 @@
             </tr>
         </thead>
         <tbody>
-            {% for row in workload_data %}
+            {% for row in weekly_data %}
             <tr>
-                <td>
-                    <div class="avatar">
-                        <div class="avatar-circle
-                            {% if row.load_class == 'warning' %}warning-bg
-                            {% elif row.load_class == 'success' %}success-bg{% endif %}">
-                            {{ row.user.first_name|slice:":1"|upper|default:row.user.username|slice:":1"|upper }}
-                        </div>
-                        {{ row.user.get_full_name|default:row.user.username }}
-                    </div>
-                </td>
+                <td style="font-weight: 500;">{{ row.user.get_full_name|default:row.user.username }}</td>
                 <td>{{ row.planned }} ч</td>
                 <td>{{ row.actual }} ч</td>
                 <td>{{ row.available }} ч</td>
                 <td>
-                    <div class="load-indicator">
-                        <span class="load-dot
-                            {% if row.load_class == 'success' %}green
-                            {% elif row.load_class == 'warning' %}yellow
-                            {% else %}red{% endif %}">
+                    <span class="load-dot {% if row.load_class == 'danger' %}red{% elif row.load_class == 'warning' %}yellow{% else %}green{% endif %}"
+                          style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px;
+                          background: {% if row.load_class == 'danger' %}var(--danger){% elif row.load_class == 'warning' %}var(--warning){% else %}var(--success){% endif %};">
+                    </span>
+                    {{ row.load_percent }}%
+                    <span class="load-bar-bg" style="display: inline-block; width: 80px; height: 6px; background: #e8e8f0; border-radius: 10px; vertical-align: middle; margin-left: 6px; overflow: hidden;">
+                        <span style="display: block; height: 6px; border-radius: 10px;
+                              width: {% if row.load_percent > 100 %}100{% else %}{{ row.load_percent }}{% endif %}%;
+                              background: {% if row.load_class == 'danger' %}#e0857b{% elif row.load_class == 'warning' %}#f0b065{% else %}#6dbf8b{% endif %};">
                         </span>
-                        <span>{{ row.load_percent }}%</span>
-                        <span class="load-bar-bg">
-                            <span class="load-bar-fill
-                                {% if row.load_class == 'success' %}green
-                                {% elif row.load_class == 'warning' %}yellow
-                                {% else %}red{% endif %}"
-                                style="width: {% if row.load_percent > 100 %}100{% else %}{{ row.load_percent }}{% endif %}%;">
-                            </span>
-                        </span>
-                    </div>
+                    </span>
                 </td>
             </tr>
             {% empty %}
-            <tr>
-                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 20px;">
-                    <p style="font-size: 15px; font-weight: 500; margin-bottom: 6px;">Нет данных о загрузке</p>
-                    <p style="font-size: 13px;">Назначьте задачи сотрудникам, чтобы увидеть статистику</p>
-                </td>
-            </tr>
+            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">Нет задач на этой неделе</td></tr>
             {% endfor %}
         </tbody>
     </table>

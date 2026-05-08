@@ -1,0 +1,50 @@
+{% extends 'resource_planning/base.html' %}
+
+{% block title %}{{ employee_user.get_full_name }} | Projector{% endblock %}
+{% block page_title %}{{ employee_user.get_full_name|default:employee_user.username }}{% endblock %}
+
+{% block content %}
+
+<p class="page-subtitle">
+    <a href="{% url 'team' %}" style="color: var(--primary);">← К команде</a>
+</p>
+
+<div class="card" style="margin-bottom: 20px;">
+    <div class="detail-row">
+        <span class="detail-label">Email: </span>
+        <span class="detail-value">{{ employee_user.email|default:"—" }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Проектов: </span>
+        <span class="detail-value">{{ projects|length }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Задач в работе: </span>
+        <span class="detail-value">{{ tasks|length }}</span>
+    </div>
+</div>
+
+<h3 style="margin-bottom: 12px;">Задачи</h3>
+{% if tasks %}
+<div class="table-wrapper" style="margin-bottom: 20px;">
+    <table>
+        <thead>
+            <tr><th>Задача</th><th>Проект</th><th>Статус</th><th>Срок</th></tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td><a href="{% url 'task_detail_view' task.id %}">{{ task.title }}</a></td>
+                <td>{{ task.project.name }}</td>
+                <td>{{ task.status.name }}</td>
+                <td>{{ task.planned_end_date|date:"d.m.Y" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p style="color: var(--text-muted);">Нет задач</p>
+{% endif %}
+
+{% endblock %}

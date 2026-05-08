@@ -492,13 +492,6 @@
                 </svg>
                 Загрузка
             </a>
-
-            <a href="#">
-                <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 14 14">
-                    <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M1.5 2a1 1 0 0 0-1 1v9.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1h-2M.5 5.5h13m-10-5v3m7-3v3M3.5 2h5"/>
-                </svg>
-                Календарь
-            </a>
         </nav>
 
         <!-- Разделитель -->
@@ -507,7 +500,7 @@
         <!-- Нижняя часть меню -->
         <div class="sidebar-footer">
             <nav class="sidebar-nav">
-                <a href="#">
+                <a href="{% url 'profile' %}">
                     <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                         <circle cx="12" cy="7" r="4"/>
@@ -549,7 +542,7 @@
                 </a>
 
                 <!-- Профиль -->
-                 <a href="#" style="text-decoration: none;">
+                 <a href="{% url 'profile' %}" style="text-decoration: none;">
                     <div class="user-badge">
                         <div class="user-avatar">{{ request.user.first_name|slice:":1"|upper|default:request.user.username|slice:":1"|upper }}</div>
                         <div>
@@ -564,9 +557,29 @@
         </header>
 
         <!-- Контент -->
-        <main class="page-content">
-            {% block content %}{% endblock %}
-        </main>
+<main class="page-content">
+    {% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div style="padding: 12px 18px; border-radius: 10px; font-size: 14px; margin-bottom: 8px;
+                {% if message.tags == 'success' %}
+                    background: #e8f8f2; color: #6dbf8b; border: 1px solid #c8e8d8;
+                {% elif message.tags == 'error' %}
+                    background: #fde9e7; color: #e0857b; border: 1px solid #f8cecb;
+                {% elif message.tags == 'warning' %}
+                    background: #fef5ee; color: #f0b065; border: 1px solid #fde4cc;
+                {% else %}
+                    background: #eef3ff; color: #7494ec; border: 1px solid #d0daf0;
+                {% endif %}
+            ">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
     </div>
 
     {% block extra_scripts %}{% endblock %}

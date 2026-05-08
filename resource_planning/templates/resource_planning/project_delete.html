@@ -1,0 +1,25 @@
+{% extends 'resource_planning/base.html' %}
+
+{% block title %}Удаление проекта | Projector{% endblock %}
+{% block page_title %}Удаление проекта{% endblock %}
+
+{% block content %}
+
+<div class="card" style="max-width: 500px; margin: 0 auto; text-align: center;">
+    <p style="font-size: 16px; color: var(--text-main); margin-bottom: 10px;">
+        Вы уверены, что хотите удалить проект
+    </p>
+    <p style="font-size: 18px; font-weight: 600; color: var(--text-heading); margin-bottom: 20px;">
+        «{{ project.name }}»?
+    </p>
+    <p style="font-size: 13px; color: var(--danger); margin-bottom: 20px;">
+        Все задачи и назначения, связанные с проектом, будут удалены без возможности восстановления.
+    </p>
+    <form method="post" style="display: flex; gap: 10px; justify-content: center;">
+        {% csrf_token %}
+        <a href="{% url 'project_detail' project.id %}" class="btn btn-outline">Отмена</a>
+        <button type="submit" class="btn btn-primary" style="background: var(--danger);">Удалить</button>
+    </form>
+</div>
+
+{% endblock %}

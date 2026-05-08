@@ -191,6 +191,8 @@
     <div class="actions">
         <a href="{% url 'project_gantt' project.id %}" class="btn btn-primary">Диаграмма Ганта</a>
         <a href="{% url 'project_edit' project.id %}" class="btn btn-outline">Редактировать</a>
+        <a href="{% url 'project_delete' project.id %}" class="btn btn-outline btn-sm"
+           style="color: var(--danger); border-color: var(--danger);">Удалить</a>
     </div>
 </div>
 
@@ -228,18 +230,25 @@
     <div class="detail-card">
         <h3>Ключевые показатели (KPI)</h3>
         {% if kpis %}
-        <div class="kpi-grid">
-            {% for kpi in kpis %}
-            <div class="kpi-mini">
-                <div class="kpi-value">{{ kpi.value|floatformat:0 }}{% if kpi.name == 'Процент выполнения' or kpi.name == 'Доля просроченных задач' or kpi.name == 'Утилизация ресурсов' %}%{% endif %}</div>
-                <div class="kpi-label">{{ kpi.name }}</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <canvas id="kpiChart" height="200"></canvas>
             </div>
-            {% endfor %}
+            <div style="display: flex; flex-direction: column; gap: 10px; justify-content: center;">
+                {% for kpi in kpis %}
+                <div style="background: var(--primary-light); border-radius: 12px; padding: 12px 16px;">
+                    <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">{{ kpi.name }}</div>
+                    <div style="font-size: 22px; font-weight: 600; color: var(--primary);">
+                        {{ kpi.value|floatformat:0 }}{% if kpi.name == 'Процент выполнения' or kpi.name == 'Доля просроченных задач' or kpi.name == 'Утилизация ресурсов' %}%{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
         {% else %}
-        <div class="empty-state">
+        <div style="text-align: center; padding: 20px; color: var(--text-muted);">
             <p>Нет данных KPI</p>
-            <p>Показатели появятся после создания задач</p>
+            <p style="font-size: 12px;">Показатели появятся после создания задач</p>
         </div>
         {% endif %}
     </div>
@@ -341,5 +350,32 @@
     <p>Перейдите к диаграмме Ганта, чтобы создать первую задачу</p>
 </div>
 {% endif %}
-
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    {% if kpis %}
+    const ctx = document.getElementById('kpiChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [{% for kpi in kpis %}'{{ kpi.name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for kpi in kpis %}{{ kpi.value }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: ['#7494ec', '#6dbf8b', '#f0b065', '#e0857b'],
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, max: 100, ticks: { color: '#888888' }, grid: { color: '#e8e8f0' } },
+                x: { ticks: { color: '#888888', maxRotation: 30 } }
+            }
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}
 {% endblock %}

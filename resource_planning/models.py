@@ -284,6 +284,9 @@ class Employee(models.Model):
         related_name='manager_relation',
         verbose_name="Сотрудник"
     )
+    weekly_work_hours = models.PositiveSmallIntegerField(
+        default=40,
+        verbose_name="Норма часов в неделю")
     added_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата добавления")
 
     class Meta:

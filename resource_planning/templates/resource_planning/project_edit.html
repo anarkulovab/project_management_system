@@ -88,6 +88,21 @@
         </div>
 
         <div class="form-group">
+            <label class="form-label" for="{{ form.start_date_fact.id_for_label }}">{{ form.start_date_fact.label }}</label>
+            {{ form.start_date_fact }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.end_date_fact.id_for_label }}">{{ form.end_date_fact.label }}</label>
+            {{ form.end_date_fact }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+            {{ form.status }}
+        </div>
+
+        <div class="form-group">
             <label class="form-label" for="{{ form.priority.id_for_label }}">{{ form.priority.label }}</label>
             {{ form.priority }}
         </div>
@@ -97,9 +112,12 @@
             <div class="checkbox-group">
                 {% for user in users %}
                     <label>
-                        <input type="checkbox" name="participants" value="{{ user.id }}">
+                        <input type="checkbox" name="participants" value="{{ user.id }}"
+                            {% if user in project.participants.all %}checked{% endif %}>
                         {{ user.get_full_name|default:user.username }}
                     </label>
+                {% empty %}
+                    <p style="font-size: 13px; color: var(--text-muted);">Нет сотрудников в команде. <a href="{% url 'team' %}" style="color: var(--primary);">Добавить сотрудников</a></p>
                 {% endfor %}
             </div>
         </div>

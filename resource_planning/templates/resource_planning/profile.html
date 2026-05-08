@@ -1,0 +1,46 @@
+{% extends 'resource_planning/base.html' %}
+
+{% block title %}Личный кабинет | Projector{% endblock %}
+{% block page_title %}Личный кабинет{% endblock %}
+
+{% block content %}
+
+<div class="card" style="max-width: 500px; margin: 0 auto;">
+    <div style="text-align: center; margin-bottom: 20px;">
+        <div class="user-avatar" style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 600;">
+            {{ request.user.first_name|slice:":1"|upper|default:request.user.username|slice:":1"|upper }}
+        </div>
+        <h2 style="margin-top: 12px; color: var(--text-heading);">{{ request.user.get_full_name|default:request.user.username }}</h2>
+    </div>
+
+    <div class="detail-row">
+        <span class="detail-label">Логин: </span>
+        <span class="detail-value">{{ request.user.username }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Email: </span>
+        <span class="detail-value">{{ request.user.email|default:"Не указан" }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Имя: </span>
+        <span class="detail-value">{{ request.user.first_name|default:"Не указано" }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Фамилия: </span>
+        <span class="detail-value">{{ request.user.last_name|default:"Не указана" }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Роль: </span>
+        <span class="detail-value">
+            {% if request.user.groups.all.0.name == 'Руководитель проекта' %}
+                Руководитель проекта
+            {% elif request.user.groups.all.0.name == 'Исполнитель' %}
+                Исполнитель
+            {% else %}
+                Пользователь
+            {% endif %}
+        </span>
+    </div>
+</div>
+
+{% endblock %}
