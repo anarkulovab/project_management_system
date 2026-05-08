@@ -439,12 +439,15 @@ def task_detail(request, task_id):
     work_status = TaskStatus.objects.get(name='В работе')
 
     pending_requests = ExecutorChangeRequest.objects.filter(task=task, is_approved=False)
+    employee_ids = Employee.objects.filter(manager=request.user).values_list('employee_id', flat=True)
+    users = User.objects.filter(id__in=employee_ids)
 
     context = {
         'task': task,
         'done_status_id': done_status.id,
         'work_status_id': work_status.id,
         'pending_requests': pending_requests,
+        'users': users,
     }
     return render(request, 'resource_planning/task_detail_r.html', context)
 
@@ -526,3 +529,45 @@ def mark_notification_read(request, notification_id):
     notification.is_read = True
     notification.save()
     return redirect('notifications_list')
+
+
+def reject_executor_change(request, request_id):
+    req = get_object_or_404(ExecutorChangeRequest, id=request_id)
+
+    Notification.objects.create(
+        user=req.from_user,
+        task=req.task,
+        message=f'{request.user.get_full_name() or request.user.username} отклонил ваш запрос на смену исполнителя в задаче «{req.task.title}».'
+    )
+
+    req.delete()
+    messages.success(request, 'Запрос на смену исполнителя отклонён.')
+    return redirect('task_detail_view', task_id=req.task.id)
+
+def assign_executor(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    if request.method == 'POST':
+        executor_id = request.POST.get('executor_id')
+        if executor_id:
+            employees = Employee.objects.filter(manager=request.user).values_list('employee', flat=True)
+            users = User.objects.filter(id__in=employees)
+            new_executor = get_object_or_404(User, id__in=employees)
+            old_executor = task.assigned_to
+            task.assigned_to = new_executor
+            task.save()
+
+            Notification.objects.create(
+                user=new_executor,
+                task=task,
+                message=f'{request.user.get_full_name() or request.user.username} назначил вас исполнителем задачи «{task.title}».'
+            )
+
+            if old_executor and old_executor != new_executor:
+                Notification.objects.create(
+                    user=old_executor,
+                    task=task,
+                    message=f'{request.user.get_full_name() or request.user.username} снял вас с задачи «{task.title}».'
+                )
+
+            messages.success(request, 'Исполнитель назначен.')
+    return redirect('task_detail_view', task_id=task.id)

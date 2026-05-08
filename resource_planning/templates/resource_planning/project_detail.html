@@ -316,7 +316,13 @@
                         <span class="badge badge-active">{{ task.status.name }}</span>
                     {% endif %}
                 </td>
-                <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.username|default:"Не назначен" }}</td>
+                <td>
+                    {% if task.assigned_to %}
+                        {{ task.assigned_to.get_full_name|default:task.assigned_to.username }}
+                    {% else %}
+                        <span style="color: var(--text-muted);">Не назначен</span>
+                    {% endif %}
+                </td>
                 <td>
                     {% if task.planned_end_date %}
                         {{ task.planned_end_date|date:"d.m.Y" }}

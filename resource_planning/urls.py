@@ -19,4 +19,6 @@ urlpatterns = [
     path('change-request/<int:request_id>/approve/', views.approve_executor_change, name='approve_change'),
     path('notifications/', views.notifications_list, name='notifications_list'),
     path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+    path('change-request/<int:request_id>/reject/', views.reject_executor_change, name='reject_change'),
+    path('task/<int:task_id>/assign/', views.assign_executor, name='assign_executor'),
 ]

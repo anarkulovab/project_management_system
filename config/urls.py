@@ -18,8 +18,10 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from resource_planning.views import redirect_by_role
+from django.shortcuts import redirect
 
 urlpatterns = [
+    path('', lambda request: redirect('login')),
     path('admin/', admin.site.urls),
     path('tasks/', include('task_management.urls')),
     path('resource/', include('resource_planning.urls')),
