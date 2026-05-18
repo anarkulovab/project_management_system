@@ -270,8 +270,25 @@ def add_comment(request, task_id):
                 text=text
             )
 
-    return redirect('task-detail', task_id=task.id)
+            from .models import Notification
 
+            # Оповещение руководителю, если комментирует исполнитель
+            if task.project.manager and request.user != task.project.manager:
+                Notification.objects.create(
+                    user=task.project.manager,
+                    task=task,
+                    message=f'{request.user.get_full_name() or request.user.username} оставил(а) комментарий к задаче "{task.title}".'
+                )
+
+            # Оповещение исполнителю, если комментирует руководитель
+            if task.assigned_to and request.user == task.project.manager:
+                Notification.objects.create(
+                    user=task.assigned_to,
+                    task=task,
+                    message=f'Руководитель {request.user.get_full_name() or request.user.username} оставил(а) комментарий к задаче "{task.title}".'
+                )
+
+    return redirect('task-detail', task_id=task.id)
 
 from django.shortcuts import render, get_object_or_404, redirect
 from resource_planning.models import Project
@@ -328,6 +345,11 @@ def create_task(request):
 @login_required
 def request_executor_change(request, task_id):
     task = get_object_or_404(Task, id=task_id, assigned_to=request.user)
+    if task.status.name == 'На проверке':
+        return render(request, 'task_management/access_denied.html', {
+            'task': task,
+            'message': 'Нельзя запросить смену исполнителя, пока задача на проверке у руководителя.'
+        }, status=403)
 
     if request.method == 'POST':
         to_user_id = request.POST.get('to_user')
@@ -353,9 +375,9 @@ def request_executor_change(request, task_id):
         TaskHistory.objects.create(
             task=task,
             user=request.user,
-            changed_field='executor_change_request',
-            old_value=str(request.user),
-            new_value=f'Запрос на {to_user}',
+            changed_field='Запрос смены исполнителя',
+            old_value=request.user.get_full_name() or request.user.username,
+            new_value=f'{to_user.get_full_name() or to_user.username}',
         )
 
         # Оповещение руководителю
@@ -366,7 +388,7 @@ def request_executor_change(request, task_id):
                 message=f'{request.user.get_full_name() or request.user.username} просит передать задачу "{task.title}" сотруднику {to_user.get_full_name() or to_user.username}. Причина: {reason or "не указана"}.'
             )
 
-        messages.success(request, '✅ Запрос на смену исполнителя отправлен руководителю.')
+        messages.success(request, 'Запрос на смену исполнителя отправлен руководителю.')
         return redirect('task-detail', task_id=task.id)
 
     # GET — показать форму
@@ -477,6 +499,12 @@ def project_list(request):
 @login_required
 def create_subtask(request, parent_task_id):
     parent_task = get_object_or_404(Task, id=parent_task_id)
+
+    if parent_task.status.name == 'На проверке':
+        return render(request, 'task_management/access_denied.html', {
+            'task': parent_task,
+            'message': 'Нельзя создавать подзадачи, когда задача находится на проверке у руководителя.'
+        }, status=403)
 
     # Только исполнитель или автор может создать подзадачу
     if request.user != parent_task.assigned_to and request.user != parent_task.author:

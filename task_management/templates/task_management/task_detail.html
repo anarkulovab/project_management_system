@@ -135,7 +135,9 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h3 style="margin:0;">Подзадачи</h3>
-                <a href="{% url 'create-subtask' task.id %}" class="btn btn-primary btn-sm">Добавить</a>
+                {% if task.status.name != 'На проверке' %}
+    <a href="{% url 'create-subtask' task.id %}" class="btn btn-sm" style="background: var(--role-member); color: white;">Добавить</a>
+{% endif %}
             </div>
             {% if task.subtasks.all %}
                 {% for subtask in task.subtasks.all %}
@@ -182,7 +184,8 @@
             {% for entry in history %}
                 <div class="history-entry">
                     <small style="color: var(--text-muted);">{{ entry.changed_at|date:"d.m.Y H:i" }}</small>
-                    <br><strong style="color: var(--primary);">{{ entry.user }}</strong>
+                    <br>
+                    <strong style="color: var(--accent-core);">{{ entry.user.get_full_name|default:entry.user.username }}</strong>
                     <br><span style="color: var(--text-secondary);">{{ entry.changed_field }}:</span>
                     {{ entry.old_value }} &rarr; <span style="color: var(--role-member);">{{ entry.new_value }}</span>
                 </div>
@@ -200,9 +203,9 @@
             Запрос отправлен
         </button>
     {% else %}
-        <a href="{% url 'request-change' task.id %}" class="btn btn-sm mt-2" style="border: 1px solid var(--warning); color: var(--warning);">
-            Передать задачу
-        </a>
+        {% if task.status.name != 'На проверке' %}
+    <a href="{% url 'request-change' task.id %}">Передать задачу</a>
+{% endif %}
     {% endif %}
 {% endwith %}
         </div>
