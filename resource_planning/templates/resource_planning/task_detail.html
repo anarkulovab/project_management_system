@@ -117,7 +117,8 @@
         <p>Нет комментариев</p>
     {% endfor %}
 
-    <form method="post" action="/tasks/task/{{ task.id }}/comment/">
+
+    <form method="post" action="{% url 'add-comment' task.id %}">
         {% csrf_token %}
         <textarea name="text" rows="2"></textarea>
         <button type="submit">Отправить</button>
