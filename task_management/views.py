@@ -1,3 +1,5 @@
+from asyncio import tasks
+
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseForbidden
@@ -445,34 +447,30 @@ def personal_dashboard(request):
 def project_detail(request, project_id):
     project = get_object_or_404(Project, id=project_id)
 
-    # Проверка доступа
     is_manager = request.user.groups.filter(name='Руководитель проекта').exists()
     is_participant = project.participants.filter(id=request.user.id).exists()
-    is_admin = request.user.is_staff
 
-    if not is_manager and not is_admin and not is_participant:
+    if not is_manager and not is_participant:
         return render(request, 'task_management/access_denied.html', {
             'task': project,
-            'message': 'У вас нет доступа к этому проекту. Вы не являетесь участником.'
+            'message': 'У вас нет доступа к этому проекту.'
         }, status=403)
 
-    statuses = TaskStatus.objects.all().order_by('order')
-
-    # Все задачи проекта
-    project_tasks = Task.objects.filter(project=project, parent_task__isnull=True).select_related('assigned_to', 'status')
-
-    # Группируем по статусам
-    for status in statuses:
-        status.filtered_tasks = project_tasks.filter(status=status)
-        status.task_count = status.filtered_tasks.filter(parent_task__isnull=True).count()
+    #Только задачи текущего пользователя
+    user_tasks = Task.objects.filter(
+        project=project,
+        assigned_to=request.user,
+        parent_task__isnull=True
+    )
+    total_user_tasks = user_tasks.count()
+    done_user_tasks = user_tasks.filter(status__name='Готово').count()
 
     context = {
         'project': project,
-        'statuses': statuses,
-        'total_tasks': project_tasks.count(),
+        'total_user_tasks': total_user_tasks,
+        'done_user_tasks': done_user_tasks,
     }
     return render(request, 'task_management/project_detail.html', context)
-
 
 @login_required
 def project_list(request):
@@ -486,8 +484,17 @@ def project_list(request):
         projects = Project.objects.filter(participants=user).order_by('-created_at')
 
     for project in projects:
-        project.task_count = Task.objects.filter(project=project, parent_task__isnull=True).count()
-        project.done_count = Task.objects.filter(project=project, status__name='Готово').count()
+        project.task_count = Task.objects.filter(
+            project=project,
+            assigned_to=user,
+            parent_task__isnull=True
+        ).count()
+        project.done_count = Task.objects.filter(
+            project=project,
+            assigned_to=user,
+            status__name='Готово',
+            parent_task__isnull=True
+        ).count()
 
     context = {
         'projects': projects,
@@ -637,3 +644,5 @@ def approve_executor_change(request, request_id):
 
     messages.success(request, 'Исполнитель изменён.')
     return redirect('task-detail', task_id=req.task.id)
+
+
