@@ -105,6 +105,24 @@
 </div>
 {% endif %}
 
+<div class="card">
+    <h3>Комментарии</h3>
+    {% for comment in task.comments.all %}
+        <div>
+            <strong>{{ comment.author.get_full_name|default:comment.author.username }}</strong>
+            <small>{{ comment.created_at|date:"d.m.Y H:i" }}</small>
+            <p>{{ comment.text }}</p>
+        </div>
+    {% empty %}
+        <p>Нет комментариев</p>
+    {% endfor %}
+
+    <form method="post" action="/tasks/task/{{ task.id }}/comment/">
+        {% csrf_token %}
+        <textarea name="text" rows="2"></textarea>
+        <button type="submit">Отправить</button>
+    </form>
+</div>
 <!-- Модальное окно смены исполнителя -->
 <div class="modal-overlay" id="assign-modal">
     <div class="modal-card">

@@ -574,7 +574,7 @@ def task_detail(request, task_id):
         'pending_requests': pending_requests,
         'users': users,
     }
-    return render(request, 'resource_planning/task_detail_r.html', context)
+    return render(request, 'resource_planning/task_detail.html', context)
 
 
 def approve_executor_change(request, request_id):
