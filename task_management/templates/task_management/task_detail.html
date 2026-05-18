@@ -123,8 +123,8 @@
             </span></div>
             <div class="info-row"><span class="info-label">Приоритет</span><span class="info-value priority-{{ task.priority }}">{{ task.get_priority_display }}</span></div>
             <div class="info-row"><span class="info-label">Проект</span><span class="info-value"><a href="{% url 'project-detail' task.project.id %}" style="color: var(--primary); text-decoration: none;">{{ task.project.name }}</a></span></div>
-            <div class="info-row"><span class="info-label">Исполнитель</span><span class="info-value" style="color: var(--role-member);">{{ task.assigned_to|default:"Не назначен" }}</span></div>
-            <div class="info-row"><span class="info-label">Автор</span><span class="info-value">{{ task.author|default:"—" }}</span></div>
+            <div class="info-row"><span class="info-label">Исполнитель</span><span style="color: var(--role-member);">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</span></div>
+            <div class="info-row"><span class="info-label">Автор</span><span style="color: var(--text-secondary);">{{ task.author.get_full_name|default:task.author.username }}</span></div>
             {% if task.planned_start_date %}
 <div class="info-row"><span class="info-label">Дата начала</span><span class="info-value">{{ task.planned_start_date|date:"d.m.Y" }}</span></div>
 {% endif %}
@@ -160,7 +160,7 @@
             <h3>Комментарии</h3>
             {% for comment in comments %}
                 <div class="comment-entry">
-                    <span class="comment-author">{{ comment.author }}</span>
+                    <span class="comment-author">{{ comment.author.get_full_name|default:comment.author.username }}</span>
                     <span class="comment-time">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
                     <p style="margin-top: 6px; font-size: 14px;">{{ comment.text }}</p>
                 </div>
