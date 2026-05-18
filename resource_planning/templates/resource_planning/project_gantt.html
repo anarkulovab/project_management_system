@@ -258,8 +258,8 @@
         <div class="form-group">
             <label class="form-label" for="task-assignee">Исполнитель</label>
             <select id="task-assignee" class="form-select">
-                <option value="">— Не назначен —</option>
-                {% for user in users %}
+                <option value="">Не назначен</option>
+                {% for user in project.participants.all %}
                     <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
                 {% endfor %}
             </select>
@@ -403,6 +403,10 @@
     function closeCreateModal() {
         document.getElementById('create-modal').classList.remove('active');
         document.getElementById('task-title').value = '';
+        document.getElementById('task-description').value = '';
+        document.getElementById('task-hours').value = '';
+        document.getElementById('task-priority').value = 'medium';
+        document.getElementById('task-assignee').value = '';
     }
 
     async function submitTask() {
@@ -434,7 +438,8 @@
                 closeCreateModal();
                 loadStaticGantt();
             } else {
-                alert('Ошибка при создании задачи');
+                var errorData = await response.json();
+                alert(errorData.error || 'Ошибка при создании задачи');
             }
         } catch (e) {
             alert('Ошибка: ' + e.message);

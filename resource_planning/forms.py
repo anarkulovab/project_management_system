@@ -46,6 +46,9 @@ class ProjectForm(forms.ModelForm):
             employee_ids = Employee.objects.filter(manager=user).values_list('employee_id', flat=True)
             self.fields['participants'].queryset = User.objects.filter(id__in=employee_ids)
             self.fields['participants'].label_from_instance = lambda obj: obj.get_full_name() or obj.username
+        self.fields['status'].required = False
+        self.fields['start_date_fact'].required = False
+        self.fields['end_date_fact'].required = False
 
 class TaskCreateForm(forms.ModelForm):
     class Meta:

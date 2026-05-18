@@ -113,14 +113,12 @@
 <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
     <div>
         <h1 class="page-title" style="margin-bottom: 4px;">{{ task.title }}</h1>
+
         <p class="page-subtitle" style="margin-bottom: 0;">
-            Проект: {{ task.project.name }}
+            Проект: <a href="{% url 'project_detail' task.project.id %}" style="color: var(--primary); text-decoration: none;">{{ task.project.name }}</a>
         </p>
-        <p class="page-subtitle" style="margin-top: 2px;">
-            <a href="{% url 'project_detail' task.project.id %}" style="color: var(--primary);">← К проекту</a>
-            &nbsp;&middot;&nbsp;
-            <a href="{% url 'notifications_list' %}" style="color: var(--text-secondary);">← К уведомлениям</a>
-        </p>
+        <a href="javascript:history.back()" class="btn btn-outline btn-sm" style="margin-top: 8px;">Назад</a>
+
     </div>
     <button type="button" class="btn btn-primary btn-sm" onclick="openAssignModal()"
             style="display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding: 10px 20px; font-size: 14px; height: auto;">
@@ -232,8 +230,8 @@
             <div class="form-group">
                 <label class="form-label" for="id_new_executor">Исполнитель</label>
                 <select name="executor_id" id="id_new_executor" class="form-select" required>
-                    <option value="">— Выберите —</option>
-                    {% for user in users %}
+                    <option value="">Выберите</option>
+                    {% for user in task.project.participants.all %}
                         <option value="{{ user.id }}" {% if task.assigned_to and task.assigned_to.id == user.id %}selected{% endif %}>
                             {{ user.get_full_name|default:user.username }}
                         </option>

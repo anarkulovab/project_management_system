@@ -27,4 +27,5 @@ urlpatterns = [
     path('team/<int:employee_id>/', views.employee_detail, name='employee_detail'),
     path('calendar/', views.all_tasks_calendar, name='all_tasks_calendar'),
     path('calendar/tasks-api/', views.all_tasks_api, name='all_tasks_api'),
+    path('notifications/mark-all-read/', views.mark_all_read, name='mark_all_read'),
 ]
