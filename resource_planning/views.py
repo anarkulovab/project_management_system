@@ -19,20 +19,16 @@ import string
 from task_management.models import ExecutorChangeRequest
 
 @login_required
-# Дашборды
 def dashboard(request):
+    """Функция для вывода дашборда"""
     # Только проекты текущего руководителя
     projects = Project.objects.filter(manager=request.user)
-
     total_projects = projects.count()
     active_projects = projects.filter(status__name='Активен').count()
     completed_projects = projects.filter(status__name='Завершён').count()
 
     # Просроченные задачи только по проектам руководителя
-    overdue_tasks = Task.objects.filter(
-        project__manager=request.user,
-        planned_end_date__lt=timezone.now()
-    ).exclude(status__name='Готово').count()
+    overdue_tasks = Task.objects.filter(project__manager=request.user, planned_end_date__lt=timezone.now()).exclude(status__name='Готово').count()
 
     # Загрузка — только по задачам проектов руководителя
     assignments = TaskAssignment.objects.filter(task__project__manager=request.user)
@@ -47,10 +43,8 @@ def dashboard(request):
         kpi = KPI.objects.filter(project=p, name='Процент выполнения').first()
         project_progress.append(float(kpi.value) if kpi else 0)
 
-    # Статусы задач — только по проектам руководителя
-    task_statuses = Task.objects.filter(
-        project__manager=request.user
-    ).values('status__name').annotate(count=models.Count('id'))
+    # Статусы задач: выводятся только по проектам руководителя
+    task_statuses = Task.objects.filter(project__manager=request.user).values('status__name').annotate(count=models.Count('id'))
     status_labels = [ts['status__name'] for ts in task_statuses]
     status_counts = [ts['count'] for ts in task_statuses]
 
@@ -59,18 +53,9 @@ def dashboard(request):
     kpi_list = KPI.objects.filter(project__manager=request.user)[:20]
 
     context = {
-        'total_projects': total_projects,
-        'active_projects': active_projects,
-        'completed_projects': completed_projects,
-        'overdue_tasks': overdue_tasks,
-        'avg_utilization': avg_utilization,
-        'project_names': project_names,
-        'project_progress': project_progress,
-        'status_labels': status_labels,
-        'status_counts': status_counts,
-        'project_list': project_list,
-        'kpi_list': kpi_list,
-    }
+        'total_projects': total_projects, 'active_projects': active_projects, 'completed_projects': completed_projects, 'overdue_tasks': overdue_tasks,
+        'avg_utilization': avg_utilization, 'project_names': project_names, 'project_progress': project_progress, 'status_labels': status_labels,
+        'status_counts': status_counts, 'project_list': project_list, 'kpi_list': kpi_list,}
     return render(request, 'resource_planning/dashboard.html', context)
 
 
@@ -534,44 +519,31 @@ def add_employee(request):
         if not email:
             messages.error(request, 'Email обязателен')
             return redirect('team')
-
-        # Проверяем, существует ли пользователь с таким email
+        # Проверка, существует ли пользователь с таким email
         user = User.objects.filter(email=email).first()
-
         if user:
-            # Пользователь уже существует — проверяем, не добавлен ли уже
+            # Если пользователь уже существует, то проверяем, не добавлен ли уже
             if Employee.objects.filter(manager=request.user, employee=user).exists():
                 messages.warning(request, f'{user.get_full_name() or user.username} уже в вашей команде')
             else:
                 Employee.objects.create(manager=request.user, employee=user)
                 messages.success(request, f'{user.get_full_name() or user.username} добавлен в команду')
         else:
-            # Создаём нового пользователя
-            username = email.split('@')[0]
-            # Проверяем уникальность логина
-            if User.objects.filter(username=username).exists():
+            username = email.split('@')[0] # Создание нового пользователя
+            if User.objects.filter(username=username).exists(): # Проверка уникальности логина
                 username = f"{username}{random.randint(100, 999)}"
 
             password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
 
             user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password,
-                first_name=first_name,
-                last_name=last_name,
-            )
+                username=username, email=email, password=password, first_name=first_name, last_name=last_name)
             executor_group = Group.objects.get(name='Исполнитель')
             user.groups.add(executor_group)
             Employee.objects.create(manager=request.user, employee=user)
-            messages.success(
-                request,
-                f'Сотрудник создан. Логин: {username}, Пароль: {password}. '
-                f'Эти данные показаны только один раз. Скопируйте их сейчас и передайте сотруднику.'
-            )
-
+            messages.success(request,
+                             f'Сотрудник создан. Логин: {username}, Пароль: {password}. '
+                             f''f'Эти данные показаны только один раз. Скопируйте их сейчас и передайте сотруднику.')
         return redirect('team')
-
     return redirect('team')
 
 
