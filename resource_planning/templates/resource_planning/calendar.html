@@ -1,0 +1,107 @@
+{% extends 'resource_planning/base.html' %}
+{% load static %}
+
+{% block title %}Календарь задач | Projector{% endblock %}
+{% block page_title %}Календарь{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<style>
+    .calendar-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: var(--shadow);
+    }
+    .fc {
+        --fc-border-color: #e8e8f0;
+        --fc-page-bg-color: #ffffff;
+        --fc-neutral-bg-color: #fafbfe;
+        --fc-today-bg-color: rgba(116,148,236,0.06);
+    }
+    .fc .fc-toolbar-title {
+        color: var(--text-heading);
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
+    .fc .fc-button {
+        background: var(--surface);
+        border-color: var(--border);
+        color: var(--text-main);
+        font-weight: 500;
+        font-size: 0.8rem;
+        padding: 6px 12px;
+        border-radius: 8px;
+    }
+    .fc .fc-button:hover {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    .fc .fc-button-active {
+        background: var(--primary) !important;
+        border-color: var(--primary) !important;
+        color: #fff !important;
+    }
+    .fc th {
+        background: #fafbfe;
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.75rem;
+    }
+    .fc-event {
+        border: none !important;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 12px;
+        cursor: pointer;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<h1 class="page-title">Календарь задач</h1>
+<p class="page-subtitle">Все задачи по всем проектам</p>
+
+<div class="calendar-card">
+    <div id="calendar"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'multiMonthYear,dayGridMonth,timeGridWeek'
+            },
+            locale: 'ru',
+            buttonText: {
+                today: 'Сегодня',
+                month: 'Месяц',
+                week: 'Неделя',
+                multiMonthYear: 'Год'
+            },
+            firstDay: 1,
+            height: 'auto',
+            events: '{% url "all_tasks_api" %}',
+            eventClick: function(info) {
+                window.location.href = '/resource/task/' + info.event.id + '/';
+            },
+            eventDidMount: function(info) {
+                if (info.event.extendedProps.status === 'Готово') {
+                    info.el.style.opacity = '0.6';
+                }
+            }
+        });
+        calendar.render();
+    });
+</script>
+{% endblock %}

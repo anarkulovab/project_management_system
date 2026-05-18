@@ -756,3 +756,27 @@ def employee_detail(request, employee_id):
 def mark_all_read(request):
     Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
     return redirect('notifications_list')
+
+@login_required
+def all_tasks_calendar(request):
+    users = User.objects.filter(is_active=True, is_superuser=False)
+    return render(request, 'resource_planning/calendar.html', {'users': users})
+
+def all_tasks_api(request):
+    tasks = Task.objects.filter(project__manager=request.user).select_related('status', 'assigned_to', 'project')
+    events = []
+    for task in tasks:
+        events.append({
+            'id': task.id,
+            'title': f'[{task.project.name}] {task.title}',
+            'start': task.planned_start_date.isoformat() if task.planned_start_date else task.created_at.isoformat(),
+            'end': task.planned_end_date.isoformat() if task.planned_end_date else None,
+            'color': get_status_color(task.status.name if task.status else ''),
+            'url': f'/resource/task/{task.id}/',
+            'extendedProps': {
+                'status': task.status.name if task.status else 'Без статуса',
+                'assignee': task.assigned_to.get_full_name() if task.assigned_to else 'Не назначен',
+                'project': task.project.name,
+            }
+        })
+    return JsonResponse(events, safe=False)

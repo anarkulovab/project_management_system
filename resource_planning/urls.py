@@ -25,4 +25,6 @@ urlpatterns = [
     path('projects/<int:project_id>/delete/', views.project_delete, name='project_delete'),
     path('team/add-absence/', views.add_absence, name='add_absence'),
     path('team/<int:employee_id>/', views.employee_detail, name='employee_detail'),
+    path('calendar/', views.all_tasks_calendar, name='all_tasks_calendar'),
+    path('calendar/tasks-api/', views.all_tasks_api, name='all_tasks_api'),
 ]
