@@ -751,3 +751,8 @@ def employee_detail(request, employee_id):
         'projects': projects,
     }
     return render(request, 'resource_planning/employee_detail.html', context)
+
+@login_required
+def mark_all_read(request):
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return redirect('notifications_list')
