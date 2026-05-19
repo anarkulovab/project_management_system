@@ -185,6 +185,12 @@ def task_create_api(request, project_id):
     description = data.get('description', '')
     # Если плановые часы не указаны — считаем по дням
     planned_hours = data.get('planned_hours')
+    project = get_object_or_404(Project, id=project_id)
+
+    # Преобразуем строки в datetime
+    start_date = datetime.fromisoformat(start_str) if start_str else None
+    end_date = datetime.fromisoformat(end_str) if end_str else None
+
     if planned_hours:
         planned_hours = int(planned_hours)
     elif start_date and end_date:
@@ -192,12 +198,6 @@ def task_create_api(request, project_id):
         planned_hours = work_days * 8
     else:
         planned_hours = 0
-
-    project = get_object_or_404(Project, id=project_id)
-
-    # Преобразуем строки в datetime
-    start_date = datetime.fromisoformat(start_str) if start_str else None
-    end_date = datetime.fromisoformat(end_str) if end_str else None
 
     # Проверка: плановые часы не могут превышать доступное время
     if start_date and end_date and planned_hours > 0:
