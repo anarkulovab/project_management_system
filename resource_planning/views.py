@@ -183,7 +183,15 @@ def task_create_api(request, project_id):
     start_str = data.get('start')
     end_str = data.get('end')
     description = data.get('description', '')
-    planned_hours = int(data.get('planned_hours', 0))
+    # Если плановые часы не указаны — считаем по дням
+    planned_hours = data.get('planned_hours')
+    if planned_hours:
+        planned_hours = int(planned_hours)
+    elif start_date and end_date:
+        work_days = max(1, (end_date - start_date).days + 1)
+        planned_hours = work_days * 8
+    else:
+        planned_hours = 0
 
     project = get_object_or_404(Project, id=project_id)
 
@@ -753,6 +761,7 @@ def approve_executor_change(request, request_id):
 
 
 @csrf_exempt
+@login_required
 def update_task_status(request, task_id):
     if request.method == 'POST':
         task = get_object_or_404(Task, id=task_id)
@@ -765,12 +774,23 @@ def update_task_status(request, task_id):
                 task.status = new_status
                 task.save()
 
-                # Создаём уведомление исполнителю
+                # Если задача переведена в «Готово» — считаем фактические часы
+                if new_status.name == 'Готово' and task.planned_start_date and task.planned_end_date:
+                    assignment = TaskAssignment.objects.filter(task=task).first()
+                    if assignment:
+                        # Считаем рабочие дни между началом и концом
+                        delta_days = (task.planned_end_date.date() - task.planned_start_date.date()).days + 1
+                        delta_days = max(1, delta_days)  # минимум 1 день
+                        auto_hours = delta_days * 8
+                        assignment.actual_hours += auto_hours
+                        assignment.save()
+
                 if task.assigned_to:
                     Notification.objects.create(
                         user=task.assigned_to,
                         task=task,
-                        message=f'Руководитель изменил статус задачи «{task.title}» на «{new_status.name}».'
+                        message=f'{request.user.get_full_name() or request.user.username} '
+                                f'перевёл задачу «{task.title}» в статус «{new_status.name}».'
                     )
 
                 return JsonResponse({'success': True, 'status': new_status.name})
