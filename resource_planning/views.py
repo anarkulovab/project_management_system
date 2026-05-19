@@ -500,7 +500,7 @@ def project_detail(request, project_id):
     kpis = [
         {'name': 'Процент выполнения', 'value': progress},
         {'name': 'Индекс соблюдения сроков', 'value': 100 - overdue_rate},
-        {'name': 'Утилизация ресурсов', 'value': avg_utilization},
+        {'name': 'Использование ресурсов', 'value': avg_utilization},
         {'name': 'Доля просроченных задач', 'value': overdue_rate},
     ]
     today_start = datetime.combine(date.today(), datetime.min.time())

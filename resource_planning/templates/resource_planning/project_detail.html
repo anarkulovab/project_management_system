@@ -238,7 +238,7 @@
                 <div style="background: var(--primary-light); border-radius: 12px; padding: 12px 16px;">
                     <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">{{ kpi.name }}</div>
                     <div style="font-size: 22px; font-weight: 600; color: var(--primary);">
-                        {{ kpi.value|floatformat:0 }}{% if kpi.name == 'Процент выполнения' or kpi.name == 'Доля просроченных задач' or kpi.name == 'Утилизация ресурсов' %}%{% endif %}
+                        {{ kpi.value|floatformat:0 }}{% if kpi.name == 'Процент выполнения' or kpi.name == 'Доля просроченных задач' or kpi.name == 'Использование ресурсов' %}%{% endif %}
                     </div>
                 </div>
                 {% endfor %}
