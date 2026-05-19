@@ -187,27 +187,50 @@ def task_create_api(request, project_id):
 
     project = get_object_or_404(Project, id=project_id)
 
-    # Преобразуем строки в datetime (ДОЛЖНО БЫТЬ ДО ИСПОЛЬЗОВАНИЯ start_date)
+    # Преобразуем строки в datetime
     start_date = datetime.fromisoformat(start_str) if start_str else None
     end_date = datetime.fromisoformat(end_str) if end_str else None
 
+    # Проверка: плановые часы не могут превышать доступное время
+    if start_date and end_date and planned_hours > 0:
+        work_days = max(1, (end_date - start_date).days + 1)
+        max_hours = work_days * 8
+        if planned_hours > max_hours:
+            return JsonResponse({
+                'error': f'Плановые часы ({planned_hours} ч) превышают доступное время за период ({max_hours} ч за {work_days} дн.).'
+            }, status=400)
     # Проверка: нельзя создать задачу с прошедшей датой начала
-    if start_date and start_date < timezone.now().replace(tzinfo=None):
+    if start_date and start_date.date() < date.today():
         return JsonResponse({'error': 'Нельзя создать задачу с прошедшей датой начала'}, status=400)
 
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.warning(
-        f'DEBUG start_str={start_str}, start_date={start_date}, start_date.date()={start_date.date() if start_date else None}, date.today()={date.today()}')
-
+    # Определяем статус
     if start_date and start_date.date() > date.today():
         default_status = TaskStatus.objects.filter(name='Запланирована').first()
-        logger.warning(f'STATUS: Запланирована')
     else:
         default_status = TaskStatus.objects.filter(name='Новая').first()
-        logger.warning(f'STATUS: Новая')
 
+    # Получаем исполнителя ДО проверок
+    assignee_id = data.get('assignee_id')
+    assignee = None
+    if assignee_id:
+        try:
+            assignee = User.objects.get(id=int(assignee_id))
+        except (User.DoesNotExist, ValueError):
+            pass
 
+    # Проверка на отсутствие
+    if assignee and start_date and end_date:
+        overlapping = UserAbsence.objects.filter(
+            user=assignee,
+            start_date__lte=end_date.date(),
+            end_date__gte=start_date.date()
+        )
+        if overlapping.exists():
+            return JsonResponse({
+                'error': f'Нельзя назначить задачу: у {assignee.get_full_name() or assignee.username} запланировано отсутствие в этом периоде.'
+            }, status=400)
+
+    # Создаём задачу
     task = Task.objects.create(
         title=title,
         description=description,
@@ -219,27 +242,9 @@ def task_create_api(request, project_id):
         author=request.user,
     )
 
-    assignee_id = data.get('assignee_id')
-    assignee = None
-
-    if assignee_id:
-        try:
-            assignee = User.objects.get(id=int(assignee_id))
-            task.assigned_to = assignee
-            task.save()
-        except (User.DoesNotExist, ValueError):
-            pass
-
-    if assignee and start_date:
-        overlapping_absence = UserAbsence.objects.filter(
-            user=assignee,
-            start_date__lte=start_date.date() if hasattr(start_date, 'date') else start_date,
-            end_date__gte=end_date.date() if end_date and hasattr(end_date, 'date') else start_date
-        )
-        if overlapping_absence.exists():
-            return JsonResponse({
-                'error': f'Нельзя назначить задачу: у {assignee.get_full_name() or assignee.username} запланировано отсутствие в этом периоде.'
-            }, status=400)
+    if assignee:
+        task.assigned_to = assignee
+        task.save()
 
     if assignee and planned_hours > 0:
         TaskAssignment.objects.create(
@@ -248,6 +253,7 @@ def task_create_api(request, project_id):
             planned_hours=planned_hours,
         )
 
+    # Проверка загрузки
     warning_msg = None
     if assignee and planned_hours > 0:
         base_date = start_date if start_date else timezone.now()
@@ -272,6 +278,7 @@ def task_create_api(request, project_id):
                 f'составит {new_total} ч при норме {weekly_norm} ч.'
             )
 
+    # Уведомление
     if assignee:
         Notification.objects.create(
             user=assignee,
@@ -279,14 +286,23 @@ def task_create_api(request, project_id):
             message=f'{request.user.get_full_name() or request.user.username} назначил вам задачу «{task.title}» в проекте «{project.name}».'
         )
 
+    # Цвет задачи
+    status_name = task.status.name if task.status else 'Новая'
+    if status_name == 'Запланирована':
+        task_color = '#b0b0b0'
+    elif warning_msg:
+        task_color = '#f0b065'
+    else:
+        task_color = '#3498DB'
+
     response_data = {
         'id': task.id,
         'title': task.title,
         'start': task.planned_start_date.isoformat() if task.planned_start_date else task.created_at.isoformat(),
         'end': task.planned_end_date.isoformat() if task.planned_end_date else None,
-        'color': '#f0b065' if warning_msg else '#3498DB',
+        'color': task_color,
         'extendedProps': {
-            'status': task.status.name if task.status else 'Новая',
+            'status': status_name,
             'assignee': task.assigned_to.get_full_name() if task.assigned_to else 'Не назначен',
             'priority': task.priority,
         }
@@ -937,3 +953,9 @@ def all_tasks_api(request):
             }
         })
     return JsonResponse(events, safe=False)
+
+@login_required
+def remove_employee(request, employee_id):
+    Employee.objects.filter(manager=request.user, employee_id=employee_id).delete()
+    messages.success(request, 'Сотрудник удалён из команды.')
+    return redirect('team')

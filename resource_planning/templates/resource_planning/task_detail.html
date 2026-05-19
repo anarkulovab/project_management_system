@@ -161,6 +161,11 @@
                 </span>
             </div>
             <div class="info-row">
+                <span class="info-label">Дата начала</span>
+                <span class="info-value">{{ task.planned_start_date|date:"d.m.Y"|default:"Не указана" }}</span>
+            </div>
+
+            <div class="info-row">
                 <span class="info-label">Срок</span>
                 <span class="info-value" style="{% if task.planned_end_date < now %}color: var(--danger);{% endif %}">
                     {{ task.planned_end_date|date:"d.m.Y H:i" }}
