@@ -976,6 +976,22 @@ def all_tasks_api(request):
 
 @login_required
 def remove_employee(request, employee_id):
+    # Проверяем, есть ли у сотрудника незавершённые задачи в проектах руководителя
+    active_tasks = Task.objects.filter(
+        assigned_to_id=employee_id,
+        project__manager=request.user
+    ).exclude(status__name='Готово')
+
+    if active_tasks.exists():
+        task_list = ', '.join(active_tasks.values_list('title', flat=True)[:3])
+        messages.error(
+            request,
+            f'Нельзя удалить сотрудника: у него есть незавершённые задачи '
+            f'({active_tasks.count()} шт., включая: {task_list}...). '
+            f'Переназначьте эти задачи перед удалением.'
+        )
+        return redirect('team')
+
     Employee.objects.filter(manager=request.user, employee_id=employee_id).delete()
     messages.success(request, 'Сотрудник удалён из команды.')
     return redirect('team')
