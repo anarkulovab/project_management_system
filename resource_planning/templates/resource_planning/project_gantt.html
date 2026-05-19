@@ -5,69 +5,78 @@
 {% block page_title %}Диаграмма Ганта{% endblock %}
 
 {% block extra_head %}
-<!-- FullCalendar -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
-
 <style>
-    /* Контейнер */
-    .gantt-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 22px;
-        box-shadow: var(--shadow);
+    .gantt-tabs {
+        display: flex;
+        gap: 0;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--border);
+    }
+    .gantt-tab {
+        padding: 10px 24px;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+    .gantt-tab:hover {
+        color: var(--primary);
+    }
+    .gantt-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
     }
 
+    .gantt-panel {
+        display: none;
+    }
+    .gantt-panel.active {
+        display: block;
+    }
 
-    /* Переопределение стилей FullCalendar под светлую тему */
+    /* FullCalendar */
     .fc {
         --fc-border-color: #e8e8f0;
         --fc-page-bg-color: #ffffff;
         --fc-neutral-bg-color: #fafbfe;
-        --fc-list-event-hover-bg-color: #f0f3ff;
-        --fc-today-bg-color: rgba(116, 148, 236, 0.06);
+        --fc-today-bg-color: rgba(116,148,236,0.06);
     }
-
     .fc .fc-toolbar-title {
         color: var(--text-heading);
         font-size: 1.05rem;
         font-weight: 600;
     }
-
     .fc .fc-button {
         background: var(--surface);
         border-color: var(--border);
         color: var(--text-main);
         font-weight: 500;
-        text-transform: capitalize;
         font-size: 0.8rem;
         padding: 6px 12px;
         border-radius: 8px;
     }
-
     .fc .fc-button:hover {
         background: var(--primary-light);
         color: var(--primary);
     }
-
     .fc .fc-button-active {
         background: var(--primary) !important;
         border-color: var(--primary) !important;
-        color: #ffffff !important;
+        color: #fff !important;
     }
-
     .fc th {
         background: #fafbfe;
         color: var(--text-secondary);
         font-weight: 500;
         font-size: 0.75rem;
     }
-
-    .fc .fc-timegrid-slot,
-    .fc .fc-daygrid-day {
-        background: var(--surface);
-    }
-
     .fc-event {
         border: none !important;
         border-radius: 6px;
@@ -77,7 +86,84 @@
         font-weight: 500;
     }
 
-    /* Модальное окно для создания задачи */
+    /* Статичная диаграмма */
+    .static-gantt {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 22px 22px 14px;
+        overflow-x: auto;
+        box-shadow: var(--shadow);
+    }
+    .gantt-header {
+        display: flex;
+        color: #aaa;
+        font-size: 11px;
+        font-weight: 500;
+        margin-bottom: 12px;
+        padding-left: 220px;
+    }
+    .gantt-header span {
+        flex: 1;
+        text-align: center;
+        min-width: 60px;
+    }
+    .gantt-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .gantt-label {
+        width: 220px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #444;
+        padding-right: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .gantt-bar-area {
+        flex: 1;
+        display: flex;
+        height: 30px;
+        position: relative;
+        background: #f8f9fc;
+        border-radius: 6px;
+        border: 1px solid #f0f0f5;
+    }
+    .gantt-bar {
+        position: absolute;
+        height: 22px;
+        top: 3px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 500;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        cursor: pointer;
+        transition: filter 0.15s;
+    }
+    .gantt-bar:hover { filter: brightness(1.1); }
+    .gantt-bar.blue { background: #7494ec; }
+    .gantt-bar.green { background: #6dbf8b; }
+    .gantt-bar.yellow { background: #f0b065; }
+    .gantt-bar.red { background: #e0857b; }
+    .gantt-today-line {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e0857b;
+        opacity: 0.8;
+        z-index: 2;
+    }
+
+    /* Модальное окно */
     .modal-overlay {
         display: none;
         position: fixed;
@@ -88,11 +174,7 @@
         align-items: flex-start;
         padding-top: 80px;
     }
-
-    .modal-overlay.active {
-        display: flex;
-    }
-
+    .modal-overlay.active { display: flex; }
     .modal-card {
         background: var(--surface);
         border-radius: 18px;
@@ -101,7 +183,6 @@
         max-width: 480px;
         box-shadow: 0 20px 40px rgba(0,0,0,0.15);
     }
-
     .modal-card h3 {
         font-size: 18px;
         font-weight: 600;
@@ -110,17 +191,15 @@
     }
 
     @media (max-width: 750px) {
-        .fc .fc-toolbar {
-            flex-wrap: wrap;
-            gap: 6px;
-        }
+        .gantt-label { width: 140px; font-size: 11px; }
+        .gantt-header { padding-left: 140px; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 12px;">
     <div>
         <h1 class="page-title">{{ project.name }}</h1>
         <p class="page-subtitle">
@@ -131,25 +210,42 @@
     </div>
 </div>
 
-<div class="gantt-card">
-    <div id="calendar"></div>
+<!-- Вкладки -->
+<div class="gantt-tabs">
+    <button class="gantt-tab active" onclick="switchTab('static')">Диаграмма</button>
+    <button class="gantt-tab" onclick="switchTab('calendar')">Календарь</button>
+</div>
+
+<!-- Статичная диаграмма -->
+<div class="gantt-panel active" id="panel-static">
+    <div class="static-gantt" id="static-gantt-container">
+        <p style="text-align: center; color: var(--text-muted); padding: 40px;">Загрузка...</p>
+    </div>
+</div>
+
+<!-- FullCalendar -->
+<div class="gantt-panel" id="panel-calendar">
+    <div class="static-gantt">
+        <div id="calendar"></div>
+    </div>
 </div>
 
 <!-- Модальное окно создания задачи -->
 <div class="modal-overlay" id="create-modal">
     <div class="modal-card">
         <h3>Новая задача</h3>
-
         <div class="form-group">
             <label class="form-label" for="task-title">Название задачи</label>
             <input type="text" id="task-title" class="form-input" placeholder="Введите название">
         </div>
-
         <div class="form-group">
             <label class="form-label" for="task-description">Описание</label>
             <textarea id="task-description" class="form-textarea" rows="2" placeholder="Описание задачи"></textarea>
         </div>
-
+        <div class="form-group">
+            <label class="form-label" for="task-hours">Плановые часы</label>
+            <input type="number" id="task-hours" class="form-input" placeholder="Например: 8" min="1" max="100">
+        </div>
         <div class="form-group">
             <label class="form-label" for="task-priority">Приоритет</label>
             <select id="task-priority" class="form-select">
@@ -159,25 +255,17 @@
                 <option value="critical">Критический</option>
             </select>
         </div>
-
         <div class="form-group">
             <label class="form-label" for="task-assignee">Исполнитель</label>
             <select id="task-assignee" class="form-select">
-                <option value="">— Не назначен —</option>
-                {% for user in users %}
+                <option value="">Не назначен</option>
+                {% for user in project.participants.all %}
                     <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
                 {% endfor %}
             </select>
         </div>
-
-        <div class="form-group">
-            <label class="form-label" for="task-hours">Плановые часы</label>
-            <input type="number" id="task-hours" class="form-input" placeholder="Например: 8" min="1" max="100">
-        </div>
-
         <input type="hidden" id="task-start">
         <input type="hidden" id="task-end">
-
         <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
             <button type="button" class="btn btn-outline" onclick="closeCreateModal()">Отмена</button>
             <button type="button" class="btn btn-primary" onclick="submitTask()">Создать задачу</button>
@@ -189,6 +277,20 @@
 
 {% block extra_scripts %}
 <script>
+    // Переключение вкладок
+    function switchTab(tab) {
+        document.querySelectorAll('.gantt-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.gantt-panel').forEach(p => p.classList.remove('active'));
+        document.querySelector('.gantt-tab.' + tab)?.classList.add('active');
+        document.getElementById('panel-' + tab).classList.add('active');
+        if (tab === 'calendar' && window.calendarInstance) {
+            window.calendarInstance.render();
+            window.calendarInstance.updateSize();
+        }
+    }
+    document.querySelector('.gantt-tab.active')?.classList.add('active');
+
+    // FullCalendar
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
         var calendar = new FullCalendar.Calendar(calendarEl, {
@@ -199,6 +301,13 @@
                 right: 'multiMonthYear,dayGridMonth,timeGridWeek'
             },
             locale: 'ru',
+            buttonText: {
+                today: 'Сегодня',
+                month: 'Месяц',
+                week: 'Неделя',
+                day: 'День',
+                multiMonthYear: 'Год'
+             },
             firstDay: 1,
             height: 'auto',
             editable: false,
@@ -210,8 +319,7 @@
                 document.getElementById('create-modal').classList.add('active');
             },
             eventClick: function(info) {
-                var taskId = info.event.id;
-                window.location.href = '/resource/task/' + taskId + '/';
+                window.location.href = '/resource/task/' + info.event.id + '/';
             },
             eventDidMount: function(info) {
                 if (info.event.extendedProps.status === 'Готово') {
@@ -223,9 +331,82 @@
         window.calendarInstance = calendar;
     });
 
+    // Статичная диаграмма
+    async function loadStaticGantt() {
+        try {
+            var response = await fetch('{% url "project_tasks_api" project.id %}');
+            var tasks = await response.json();
+            var container = document.getElementById('static-gantt-container');
+
+            if (!tasks.length) {
+                container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px;">Нет задач для отображения</p>';
+                return;
+            }
+
+            // Определяем диапазон проекта
+            var starts = tasks.map(t => new Date(t.start));
+            var ends = tasks.map(t => t.end ? new Date(t.end) : new Date());
+            var projectStart = new Date(Math.min(...starts));
+            var projectEnd = new Date(Math.max(...ends));
+            var totalDays = Math.ceil((projectEnd - projectStart) / (1000 * 60 * 60 * 24));
+            if (totalDays < 7) totalDays = 7;
+
+            // Формируем заголовки недель
+            var weeks = [];
+            var cursor = new Date(projectStart);
+            while (cursor <= projectEnd) {
+                var weekEnd = new Date(cursor);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                weeks.push({
+                    start: new Date(cursor),
+                    end: weekEnd > projectEnd ? new Date(projectEnd) : weekEnd
+                });
+                cursor.setDate(cursor.getDate() + 7);
+            }
+
+            var headerHTML = '<div class="gantt-header">';
+            weeks.forEach(w => {
+                headerHTML += '<span>' + w.start.toLocaleDateString('ru', {day:'numeric',month:'short'}) + ' – ' + w.end.toLocaleDateString('ru', {day:'numeric',month:'short'}) + '</span>';
+            });
+            headerHTML += '</div>';
+
+            var rowsHTML = '';
+            tasks.forEach(task => {
+                var startDate = new Date(task.start);
+                var endDate = task.end ? new Date(task.end) : new Date();
+                var leftPercent = ((startDate - projectStart) / (1000 * 60 * 60 * 24)) / totalDays * 100;
+                var widthPercent = ((endDate - startDate) / (1000 * 60 * 60 * 24)) / totalDays * 100;
+                if (widthPercent < 2) widthPercent = 2;
+                if (leftPercent < 0) leftPercent = 0;
+
+                var colorClass = 'blue';
+                var status = task.extendedProps.status;
+                if (status === 'Готово') colorClass = 'green';
+                else if (status === 'На проверке') colorClass = 'yellow';
+                else if (status === 'Заблокирована' || (task.end && new Date(task.end) < new Date() && status !== 'Готово')) colorClass = 'red';
+
+                rowsHTML += '<div class="gantt-row">';
+                rowsHTML += '<div class="gantt-label">' + task.title + '</div>';
+                rowsHTML += '<div class="gantt-bar-area">';
+                rowsHTML += '<div class="gantt-bar ' + colorClass + '" style="left:' + leftPercent + '%;width:' + widthPercent + '%;" onclick="window.location.href=\'/resource/task/' + task.id + '/\'">' + task.title + '</div>';
+                rowsHTML += '</div></div>';
+            });
+
+            container.innerHTML = headerHTML + rowsHTML;
+        } catch(e) {
+            document.getElementById('static-gantt-container').innerHTML = '<p style="text-align:center;color:var(--danger);padding:40px;">Ошибка загрузки диаграммы</p>';
+        }
+    }
+    loadStaticGantt();
+
+    // Модальное окно
     function closeCreateModal() {
         document.getElementById('create-modal').classList.remove('active');
         document.getElementById('task-title').value = '';
+        document.getElementById('task-description').value = '';
+        document.getElementById('task-hours').value = '';
+        document.getElementById('task-priority').value = 'medium';
+        document.getElementById('task-assignee').value = '';
     }
 
     async function submitTask() {
@@ -252,17 +433,19 @@
             });
             if (response.ok) {
                 var newEvent = await response.json();
-                window.calendarInstance.addEvent(newEvent);
+                if (newEvent.warning) { alert(newEvent.warning); }
+                if (window.calendarInstance) { window.calendarInstance.addEvent(newEvent); }
                 closeCreateModal();
+                loadStaticGantt();
             } else {
-                alert('Ошибка при создании задачи');
+                var errorData = await response.json();
+                alert(errorData.error || 'Ошибка при создании задачи');
             }
         } catch (e) {
             alert('Ошибка: ' + e.message);
         }
     }
 
-    // Закрытие модального окна по клику на оверлей
     document.getElementById('create-modal').addEventListener('click', function(e) {
         if (e.target === this) { closeCreateModal(); }
     });

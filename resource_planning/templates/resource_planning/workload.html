@@ -149,6 +149,15 @@
         color: var(--success);
     }
 
+    th {
+        background: #f8f9fc;          /* очень светлый, почти белый */
+        color: var(--text-heading);
+        font-weight: 600;
+        font-size: 12px;
+        padding: 12px 14px;
+        border-bottom: 1px solid #dde1ed;  /* тонкая, неяркая линия */
+    }
+
     @media (max-width: 750px) {
         .summary-cards {
             grid-template-columns: 1fr;
@@ -167,7 +176,7 @@
         <input type="hidden" name="week_offset" value="{{ offset }}">
         <label class="form-label" style="margin-bottom: 0; white-space: nowrap;">Проект:</label>
         <select name="project_id" class="form-select" style="width: auto; min-width: 220px;" onchange="this.form.submit()">
-            <option value="">— Все проекты —</option>
+            <option value="">Все проекты</option>
             {% for p in projects %}
                 <option value="{{ p.id }}" {% if selected_project and selected_project.id == p.id %}selected{% endif %}>{{ p.name }}</option>
             {% endfor %}
@@ -264,7 +273,12 @@
                 <td style="font-weight: 500;">{{ row.user.get_full_name|default:row.user.username }}</td>
                 <td>{{ row.planned }} ч</td>
                 <td>{{ row.actual }} ч</td>
-                <td>{{ row.available }} ч</td>
+                <td>
+                    {{ row.available }} ч
+                    {% if row.absence_note %}
+                        <br><small style="color: var(--warning);">{{ row.absence_note }}</small>
+                    {% endif %}
+                </td>
                 <td>
                     <span class="load-dot {% if row.load_class == 'danger' %}red{% elif row.load_class == 'warning' %}yellow{% else %}green{% endif %}"
                           style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px;

@@ -290,6 +290,9 @@ def add_comment(request, task_id):
                     message=f'Руководитель {request.user.get_full_name() or request.user.username} оставил(а) комментарий к задаче "{task.title}".'
                 )
 
+    referer = request.META.get('HTTP_REFERER', '')
+    if referer:
+        return redirect(referer)
     return redirect('task-detail', task_id=task.id)
 
 from django.shortcuts import render, get_object_or_404, redirect

@@ -492,6 +492,17 @@
                 </svg>
                 Загрузка
             </a>
+
+            <a href="{% url 'all_tasks_calendar' %}" class="{% if request.resolver_match.url_name == 'all_tasks_calendar' %}active{% endif %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+                    <title>Calendar SVG Icon</title>
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                        <rect width="20" height="18" x="2" y="4" rx="4"/>
+                        <path d="M8 2v4m8-4v4M2 10h20"/>
+                    </g>
+                </svg>
+                Календарь
+            </a>
         </nav>
 
         <!-- Разделитель -->

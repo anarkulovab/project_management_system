@@ -29,18 +29,6 @@
         <span class="detail-label">Фамилия: </span>
         <span class="detail-value">{{ request.user.last_name|default:"Не указана" }}</span>
     </div>
-    <div class="detail-row">
-        <span class="detail-label">Роль: </span>
-        <span class="detail-value">
-            {% if request.user.groups.all.0.name == 'Руководитель проекта' %}
-                Руководитель проекта
-            {% elif request.user.groups.all.0.name == 'Исполнитель' %}
-                Исполнитель
-            {% else %}
-                Пользователь
-            {% endif %}
-        </span>
-    </div>
 </div>
 
 {% endblock %}

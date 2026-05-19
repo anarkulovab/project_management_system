@@ -1,0 +1,309 @@
+{% extends 'resource_planning/base.html' %}
+
+{% block title %}Задача: {{ task.title }} | Projector{% endblock %}
+{% block page_title %}Задача{% endblock %}
+
+{% block extra_head %}
+<style>
+    .detail-grid {
+        display: flex;
+        gap: 24px;
+    }
+    .detail-main {
+        flex: 2;
+    }
+    .detail-side {
+        flex: 1;
+        min-width: 250px;
+    }
+    .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow);
+    }
+    .card h3 {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-heading);
+        margin-bottom: 16px;
+    }
+    .info-row {
+        display: flex;
+        margin-bottom: 10px;
+        font-size: 14px;
+    }
+    .info-label {
+        color: var(--text-secondary);
+        width: 140px;
+        flex-shrink: 0;
+    }
+    .info-value {
+        color: var(--text-main);
+        font-weight: 500;
+    }
+    .badge-status {
+        font-size: 12px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    .status-new { background: #d5f5e8; color: #1ABC9C; }
+    .status-work { background: #dae8fc; color: #3498DB; }
+    .status-review { background: #fef5ee; color: #f0b065; }
+    .status-done { background: #e8f8f2; color: #6dbf8b; }
+
+    .comment-entry {
+        background: #fafbfe;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+    .comment-author {
+        font-weight: 600;
+        color: var(--primary);
+        font-size: 13px;
+    }
+    .comment-time {
+        color: var(--text-muted);
+        font-size: 11px;
+    }
+    textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-family: inherit;
+        font-size: 13px;
+        resize: vertical;
+    }
+    textarea:focus { outline: none; border-color: var(--primary); }
+
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.3);
+        z-index: 2000;
+        justify-content: center;
+        align-items: flex-start;
+        padding-top: 80px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-card {
+        background: var(--surface);
+        border-radius: 18px;
+        padding: 28px;
+        width: 100%;
+        max-width: 460px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+
+    @media (max-width: 750px) {
+        .detail-grid { flex-direction: column; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+    <div>
+        <h1 class="page-title" style="margin-bottom: 4px;">{{ task.title }}</h1>
+
+        <p class="page-subtitle" style="margin-bottom: 0;">
+            Проект: <a href="{% url 'project_detail' task.project.id %}" style="color: var(--primary); text-decoration: none;">{{ task.project.name }}</a>
+        </p>
+        <a href="javascript:history.back()" class="btn btn-outline btn-sm" style="margin-top: 8px;">Назад</a>
+
+    </div>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openAssignModal()"
+            style="display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding: 10px 20px; font-size: 14px; height: auto;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4">
+            <path d="M18 31h20V5"/>
+            <path d="M30 21H10v22m34-32l-6-6l-6 6"/>
+            <path d="m16 37l-6 6l-6-6"/>
+        </svg>
+        Сменить исполнителя
+    </button>
+</div>
+
+<div class="detail-grid">
+    <div class="detail-main">
+        <!-- Основная информация -->
+        <div class="card">
+            <h3>Информация о задаче</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">{{ task.description|default:"Описание отсутствует" }}</p>
+
+            <div class="info-row">
+                <span class="info-label">Статус</span>
+                <span class="info-value">
+                    {% with s=task.status.name %}
+                        <span class="badge-status {% if s == 'Новая' %}status-new{% elif s == 'В работе' %}status-work{% elif s == 'На проверке' %}status-review{% elif s == 'Готово' %}status-done{% else %}status-new{% endif %}">{{ task.status }}</span>
+                    {% endwith %}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Приоритет</span>
+                <span class="info-value">{{ task.get_priority_display }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Исполнитель</span>
+                <span class="info-value">
+                    {% if task.assigned_to %}
+                        {{ task.assigned_to.get_full_name|default:task.assigned_to.username }}
+                    {% else %}
+                        Не назначен
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Дата начала</span>
+                <span class="info-value">{{ task.planned_start_date|date:"d.m.Y"|default:"Не указана" }}</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Срок</span>
+                <span class="info-value" style="{% if task.planned_end_date < now %}color: var(--danger);{% endif %}">
+                    {{ task.planned_end_date|date:"d.m.Y H:i" }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Комментарии -->
+        <div class="card">
+            <h3>Комментарии</h3>
+            {% for comment in task.comments.all %}
+                <div class="comment-entry">
+                    <span class="comment-author">{{ comment.author.get_full_name|default:comment.author.username }}</span>
+                    <span class="comment-time">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+                    <p style="margin-top: 6px; font-size: 14px; color: var(--text-main);">{{ comment.text }}</p>
+                </div>
+            {% empty %}
+                <p style="color: var(--text-muted); font-size: 13px;">Нет комментариев</p>
+            {% endfor %}
+            <form method="post" action="{% url 'add-comment' task.id %}" style="margin-top: 12px;">
+                {% csrf_token %}
+                <textarea name="text" rows="2" placeholder="Добавить комментарий..."></textarea>
+                <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 8px;">Отправить</button>
+            </form>
+        </div>
+
+        <!-- Приёмка / возврат -->
+        {% if task.status.name == 'На проверке' %}
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button type="button" class="btn btn-primary" onclick="updateStatus('{{ done_status_id }}')">✓ Принять</button>
+            <button type="button" class="btn btn-outline" onclick="updateStatus('{{ work_status_id }}')">↩ На доработку</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="detail-side">
+        <!-- Запросы на смену исполнителя -->
+        {% if pending_requests %}
+        <div class="card" style="background: #fef5ee; border-color: #f0b065;">
+            <h3>Запрос на смену исполнителя</h3>
+            {% for req in pending_requests %}
+                <p style="font-size: 14px; color: var(--text-main); margin-bottom: 8px;">
+                    {{ req.from_user.get_full_name }} запрашивает передачу задачи сотруднику {{ req.to_user.get_full_name }}
+                </p>
+                <div style="display: flex; gap: 10px;">
+                    <form method="post" action="{% url 'approve_change' req.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary btn-sm">Одобрить</button>
+                    </form>
+                    <form method="post" action="{% url 'reject_change' req.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline btn-sm">Отклонить</button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Модальное окно смены исполнителя -->
+<div class="modal-overlay" id="assign-modal">
+    <div class="modal-card">
+        <h3>Назначить исполнителя</h3>
+        <form method="post" action="{% url 'assign_executor' task.id %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label" for="id_new_executor">Исполнитель</label>
+                <select name="executor_id" id="id_new_executor" class="form-select" required>
+                    <option value="">Выберите</option>
+                    {% for user in task.project.participants.all %}
+                        <option value="{{ user.id }}" {% if task.assigned_to and task.assigned_to.id == user.id %}selected{% endif %}>
+                            {{ user.get_full_name|default:user.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+                <button type="button" class="btn btn-outline" onclick="closeAssignModal()">Отмена</button>
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openAssignModal() {
+        document.getElementById('assign-modal').classList.add('active');
+    }
+    function closeAssignModal() {
+        document.getElementById('assign-modal').classList.remove('active');
+    }
+    document.getElementById('assign-modal').addEventListener('click', function(e) {
+        if (e.target === this) { closeAssignModal(); }
+    });
+</script>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    async function updateStatus(statusId) {
+        const url = '/resource/task/{{ task.id }}/update-status/';
+        const csrfToken = getCookie('csrftoken');
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ status_id: statusId })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Ошибка при обновлении статуса');
+            }
+        } catch (e) {
+            alert('Ошибка соединения: ' + e.message);
+        }
+    }
+</script>
+{% endblock %}
