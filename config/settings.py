@@ -38,8 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Ваши приложения
-    'task_management',      # ← твоё
+    'task_management',      # ← Вика
     'resource_planning',    # ← Бегимай
+    'api', # Настя
 ]
 
 MIDDLEWARE = [
