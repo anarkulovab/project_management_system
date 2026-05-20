@@ -16,31 +16,58 @@ from resource_planning.models import (
 from task_management.models import Task, TaskStatus, Comment, Notification
 
 # ---------------------------------------------------
-# 0. ОЧИСТКА ПЕРЕД ЗАПОЛНЕНИЕМ
+# 0. ОЧИСТКА ПЕРЕД ЗАПОЛНЕНИЕМ (ПРАВИЛЬНЫЙ ПОРЯДОК)
 # ---------------------------------------------------
 
 print('Очищаю старые данные...')
 
-from task_management.models import Comment, Notification, TaskHistory
-from resource_planning.models import RiskHistory, Risk, Budget
+from django.db import connection
 
-# Удаляем в порядке зависимости
-Task.objects.filter(parent_task__isnull=False).delete()
-TaskHistory.objects.all().delete()
-Comment.objects.all().delete()
-Notification.objects.all().delete()
-TaskAssignment.objects.all().delete()
-RiskHistory.objects.all().delete()
-Risk.objects.all().delete()
-Budget.objects.all().delete()
-KPI.objects.all().delete()
-UserAbsence.objects.all().delete()
-Task.objects.all().delete()
-Project.objects.all().delete()
-Employee.objects.all().delete()
-User.objects.filter(is_superuser=False).delete()
+with connection.cursor() as cursor:
+    # 1. Подзадачи
+    cursor.execute("DELETE FROM task_management_task WHERE parent_task_id IS NOT NULL;")
 
-print('✓ Старые данные удалены')
+    # 2. Зависимые таблицы
+    cursor.execute("DELETE FROM task_management_executorchangerequest;")
+    cursor.execute("DELETE FROM task_management_notification;")
+    cursor.execute("DELETE FROM task_management_comment;")
+    cursor.execute("DELETE FROM task_management_taskhistory;")
+    cursor.execute("DELETE FROM resource_planning_taskassignment;")
+    cursor.execute("DELETE FROM resource_planning_riskhistory;")
+    cursor.execute("DELETE FROM resource_planning_risk;")
+    cursor.execute("DELETE FROM resource_planning_budget;")
+    cursor.execute("DELETE FROM resource_planning_kpi;")
+    cursor.execute("DELETE FROM resource_planning_userabsence;")
+    cursor.execute("DELETE FROM resource_planning_project_participants;")
+
+    # 3. Основные сущности
+    cursor.execute("DELETE FROM task_management_task;")
+    cursor.execute("DELETE FROM resource_planning_project;")
+    cursor.execute("DELETE FROM resource_planning_employee;")
+
+    # 4. Пользователи и права
+    cursor.execute("DELETE FROM auth_user_groups;")
+    cursor.execute("DELETE FROM auth_user_user_permissions;")
+    cursor.execute("DELETE FROM django_admin_log;")
+    cursor.execute("DELETE FROM auth_user;")
+
+    # 5. Сброс AUTO_INCREMENT
+    cursor.execute("ALTER TABLE auth_user AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE resource_planning_project AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE task_management_task AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE resource_planning_taskassignment AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE resource_planning_kpi AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE resource_planning_budget AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE resource_planning_risk AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE resource_planning_riskhistory AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE resource_planning_userabsence AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE resource_planning_employee AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE task_management_notification AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE task_management_comment AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE task_management_taskhistory AUTO_INCREMENT = 1;")
+    cursor.execute("ALTER TABLE task_management_executorchangerequest AUTO_INCREMENT = 1;")
+
+print('✓ Старые данные удалены, AUTO_INCREMENT сброшен')
 
 # ---------------------------------------------------
 # 1. СПРАВОЧНИКИ
