@@ -16,6 +16,33 @@ from resource_planning.models import (
 from task_management.models import Task, TaskStatus, Comment, Notification
 
 # ---------------------------------------------------
+# 0. ОЧИСТКА ПЕРЕД ЗАПОЛНЕНИЕМ
+# ---------------------------------------------------
+
+print('Очищаю старые данные...')
+
+from task_management.models import Comment, Notification, TaskHistory
+from resource_planning.models import RiskHistory, Risk, Budget
+
+# Удаляем в порядке зависимости
+Task.objects.filter(parent_task__isnull=False).delete()
+TaskHistory.objects.all().delete()
+Comment.objects.all().delete()
+Notification.objects.all().delete()
+TaskAssignment.objects.all().delete()
+RiskHistory.objects.all().delete()
+Risk.objects.all().delete()
+Budget.objects.all().delete()
+KPI.objects.all().delete()
+UserAbsence.objects.all().delete()
+Task.objects.all().delete()
+Project.objects.all().delete()
+Employee.objects.all().delete()
+User.objects.filter(is_superuser=False).delete()
+
+print('✓ Старые данные удалены')
+
+# ---------------------------------------------------
 # 1. СПРАВОЧНИКИ
 # ---------------------------------------------------
 
