@@ -142,6 +142,14 @@
                     <button type="button" class="btn btn-outline btn-sm" onclick="openAbsenceModal('{{ row.user.id }}')">
                         Отсутствие
                     </button>
+
+                    <a href="{% url 'remove_employee' row.user.id %}"
+                       class="btn btn-outline btn-sm"
+                       style="color: var(--danger); border-color: var(--danger);"
+                       onclick="return confirm('Удалить сотрудника из команды? Все назначенные задачи останутся без изменений.')">
+                        Удалить
+                    </a>
+
                 </td>
             </tr>
             {% endfor %}

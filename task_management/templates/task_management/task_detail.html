@@ -123,8 +123,8 @@
             </span></div>
             <div class="info-row"><span class="info-label">Приоритет</span><span class="info-value priority-{{ task.priority }}">{{ task.get_priority_display }}</span></div>
             <div class="info-row"><span class="info-label">Проект</span><span class="info-value"><a href="{% url 'project-detail' task.project.id %}" style="color: var(--primary); text-decoration: none;">{{ task.project.name }}</a></span></div>
-            <div class="info-row"><span class="info-label">Исполнитель</span><span class="info-value" style="color: var(--role-member);">{{ task.assigned_to|default:"Не назначен" }}</span></div>
-            <div class="info-row"><span class="info-label">Автор</span><span class="info-value">{{ task.author|default:"—" }}</span></div>
+            <div class="info-row"><span class="info-label">Исполнитель</span><span style="color: var(--role-member);">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</span></div>
+            <div class="info-row"><span class="info-label">Автор</span><span style="color: var(--text-secondary);">{{ task.author.get_full_name|default:task.author.username }}</span></div>
             {% if task.planned_start_date %}
 <div class="info-row"><span class="info-label">Дата начала</span><span class="info-value">{{ task.planned_start_date|date:"d.m.Y" }}</span></div>
 {% endif %}
@@ -135,7 +135,9 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h3 style="margin:0;">Подзадачи</h3>
-                <a href="{% url 'create-subtask' task.id %}" class="btn btn-primary btn-sm">Добавить</a>
+                {% if task.status.name != 'На проверке' %}
+    <a href="{% url 'create-subtask' task.id %}" class="btn btn-sm" style="background: var(--role-member); color: white;">Добавить</a>
+{% endif %}
             </div>
             {% if task.subtasks.all %}
                 {% for subtask in task.subtasks.all %}
@@ -160,7 +162,7 @@
             <h3>Комментарии</h3>
             {% for comment in comments %}
                 <div class="comment-entry">
-                    <span class="comment-author">{{ comment.author }}</span>
+                    <span class="comment-author">{{ comment.author.get_full_name|default:comment.author.username }}</span>
                     <span class="comment-time">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
                     <p style="margin-top: 6px; font-size: 14px;">{{ comment.text }}</p>
                 </div>
@@ -182,7 +184,8 @@
             {% for entry in history %}
                 <div class="history-entry">
                     <small style="color: var(--text-muted);">{{ entry.changed_at|date:"d.m.Y H:i" }}</small>
-                    <br><strong style="color: var(--primary);">{{ entry.user }}</strong>
+                    <br>
+                    <strong style="color: var(--accent-core);">{{ entry.user.get_full_name|default:entry.user.username }}</strong>
                     <br><span style="color: var(--text-secondary);">{{ entry.changed_field }}:</span>
                     {{ entry.old_value }} &rarr; <span style="color: var(--role-member);">{{ entry.new_value }}</span>
                 </div>
@@ -200,9 +203,9 @@
             Запрос отправлен
         </button>
     {% else %}
-        <a href="{% url 'request-change' task.id %}" class="btn btn-sm mt-2" style="border: 1px solid var(--warning); color: var(--warning);">
-            Передать задачу
-        </a>
+        {% if task.status.name != 'На проверке' %}
+    <a href="{% url 'request-change' task.id %}">Передать задачу</a>
+{% endif %}
     {% endif %}
 {% endwith %}
         </div>

@@ -1,3 +1,5 @@
+from asyncio import tasks
+
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseForbidden
@@ -270,8 +272,28 @@ def add_comment(request, task_id):
                 text=text
             )
 
-    return redirect('task-detail', task_id=task.id)
+            from .models import Notification
 
+            # Оповещение руководителю, если комментирует исполнитель
+            if task.project.manager and request.user != task.project.manager:
+                Notification.objects.create(
+                    user=task.project.manager,
+                    task=task,
+                    message=f'{request.user.get_full_name() or request.user.username} оставил(а) комментарий к задаче "{task.title}".'
+                )
+
+            # Оповещение исполнителю, если комментирует руководитель
+            if task.assigned_to and request.user == task.project.manager:
+                Notification.objects.create(
+                    user=task.assigned_to,
+                    task=task,
+                    message=f'Руководитель {request.user.get_full_name() or request.user.username} оставил(а) комментарий к задаче "{task.title}".'
+                )
+
+    referer = request.META.get('HTTP_REFERER', '')
+    if referer:
+        return redirect(referer)
+    return redirect('task-detail', task_id=task.id)
 
 from django.shortcuts import render, get_object_or_404, redirect
 from resource_planning.models import Project
@@ -328,6 +350,11 @@ def create_task(request):
 @login_required
 def request_executor_change(request, task_id):
     task = get_object_or_404(Task, id=task_id, assigned_to=request.user)
+    if task.status.name == 'На проверке':
+        return render(request, 'task_management/access_denied.html', {
+            'task': task,
+            'message': 'Нельзя запросить смену исполнителя, пока задача на проверке у руководителя.'
+        }, status=403)
 
     if request.method == 'POST':
         to_user_id = request.POST.get('to_user')
@@ -353,9 +380,9 @@ def request_executor_change(request, task_id):
         TaskHistory.objects.create(
             task=task,
             user=request.user,
-            changed_field='executor_change_request',
-            old_value=str(request.user),
-            new_value=f'Запрос на {to_user}',
+            changed_field='Запрос смены исполнителя',
+            old_value=request.user.get_full_name() or request.user.username,
+            new_value=f'{to_user.get_full_name() or to_user.username}',
         )
 
         # Оповещение руководителю
@@ -366,7 +393,7 @@ def request_executor_change(request, task_id):
                 message=f'{request.user.get_full_name() or request.user.username} просит передать задачу "{task.title}" сотруднику {to_user.get_full_name() or to_user.username}. Причина: {reason or "не указана"}.'
             )
 
-        messages.success(request, '✅ Запрос на смену исполнителя отправлен руководителю.')
+        messages.success(request, 'Запрос на смену исполнителя отправлен руководителю.')
         return redirect('task-detail', task_id=task.id)
 
     # GET — показать форму
@@ -423,34 +450,30 @@ def personal_dashboard(request):
 def project_detail(request, project_id):
     project = get_object_or_404(Project, id=project_id)
 
-    # Проверка доступа
     is_manager = request.user.groups.filter(name='Руководитель проекта').exists()
     is_participant = project.participants.filter(id=request.user.id).exists()
-    is_admin = request.user.is_staff
 
-    if not is_manager and not is_admin and not is_participant:
+    if not is_manager and not is_participant:
         return render(request, 'task_management/access_denied.html', {
             'task': project,
-            'message': 'У вас нет доступа к этому проекту. Вы не являетесь участником.'
+            'message': 'У вас нет доступа к этому проекту.'
         }, status=403)
 
-    statuses = TaskStatus.objects.all().order_by('order')
-
-    # Все задачи проекта
-    project_tasks = Task.objects.filter(project=project, parent_task__isnull=True).select_related('assigned_to', 'status')
-
-    # Группируем по статусам
-    for status in statuses:
-        status.filtered_tasks = project_tasks.filter(status=status)
-        status.task_count = status.filtered_tasks.filter(parent_task__isnull=True).count()
+    #Только задачи текущего пользователя
+    user_tasks = Task.objects.filter(
+        project=project,
+        assigned_to=request.user,
+        parent_task__isnull=True
+    )
+    total_user_tasks = user_tasks.count()
+    done_user_tasks = user_tasks.filter(status__name='Готово').count()
 
     context = {
         'project': project,
-        'statuses': statuses,
-        'total_tasks': project_tasks.count(),
+        'total_user_tasks': total_user_tasks,
+        'done_user_tasks': done_user_tasks,
     }
     return render(request, 'task_management/project_detail.html', context)
-
 
 @login_required
 def project_list(request):
@@ -464,8 +487,17 @@ def project_list(request):
         projects = Project.objects.filter(participants=user).order_by('-created_at')
 
     for project in projects:
-        project.task_count = Task.objects.filter(project=project, parent_task__isnull=True).count()
-        project.done_count = Task.objects.filter(project=project, status__name='Готово').count()
+        project.task_count = Task.objects.filter(
+            project=project,
+            assigned_to=user,
+            parent_task__isnull=True
+        ).count()
+        project.done_count = Task.objects.filter(
+            project=project,
+            assigned_to=user,
+            status__name='Готово',
+            parent_task__isnull=True
+        ).count()
 
     context = {
         'projects': projects,
@@ -477,6 +509,12 @@ def project_list(request):
 @login_required
 def create_subtask(request, parent_task_id):
     parent_task = get_object_or_404(Task, id=parent_task_id)
+
+    if parent_task.status.name == 'На проверке':
+        return render(request, 'task_management/access_denied.html', {
+            'task': parent_task,
+            'message': 'Нельзя создавать подзадачи, когда задача находится на проверке у руководителя.'
+        }, status=403)
 
     # Только исполнитель или автор может создать подзадачу
     if request.user != parent_task.assigned_to and request.user != parent_task.author:
@@ -609,3 +647,5 @@ def approve_executor_change(request, request_id):
 
     messages.success(request, 'Исполнитель изменён.')
     return redirect('task-detail', task_id=req.task.id)
+
+

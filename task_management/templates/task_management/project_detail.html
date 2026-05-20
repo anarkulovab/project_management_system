@@ -78,5 +78,13 @@
         <span class="info-value">{{ project.end_date_fact|date:"d.m.Y" }}</span>
     </div>
     {% endif %}
+    <div class="info-row">
+        <span class="info-label">Мои задачи в проекте</span>
+        <span class="info-value">{{ total_user_tasks }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Из них выполнено</span>
+        <span class="info-value">{{ done_user_tasks }}</span>
+    </div>
 </div>
 {% endblock %}

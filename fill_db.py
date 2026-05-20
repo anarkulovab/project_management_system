@@ -6,14 +6,14 @@ django.setup()
 
 from django.contrib.auth.models import User, Group
 from django.utils import timezone
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from resource_planning.models import (
     ProjectStatus, Priority, AbsenceType,
     ProbabilityLevel, ImpactLevel, RiskStatus,
     Project, TaskAssignment, UserAbsence,
     Risk, RiskHistory, Budget, KPI, Employee
 )
-from task_management.models import Task, TaskStatus
+from task_management.models import Task, TaskStatus, Comment, Notification
 
 # ---------------------------------------------------
 # 1. СПРАВОЧНИКИ
@@ -50,7 +50,6 @@ risk_analysis, _ = RiskStatus.objects.get_or_create(name='Анализирует
 risk_mitigated, _ = RiskStatus.objects.get_or_create(name='Приняты меры')
 risk_closed, _ = RiskStatus.objects.get_or_create(name='Закрыт')
 
-# Статусы задач — создаём полный набор
 ts_planned, _ = TaskStatus.objects.get_or_create(name='Запланирована', defaults={'order': 1})
 ts_new, _ = TaskStatus.objects.get_or_create(name='Новая', defaults={'order': 2})
 ts_in_progress, _ = TaskStatus.objects.get_or_create(name='В работе', defaults={'order': 3})
@@ -70,10 +69,18 @@ print('✓ Справочники созданы')
 print('Создаю пользователей...')
 
 users_data = [
-    ('director', 'director@example.com', 'Илья', 'Новиков', [manager_group]),
-    ('manager', 'manager@example.com', 'Марина', 'Васильева', [manager_group]),
-    ('executor1', 'executor1@example.com', 'Анна', 'Петрова', [executor_group]),
-    ('executor2', 'executor2@example.com', 'Сергей', 'Смирной', [executor_group]),
+    # Для Насти
+    ('director', 'director@example.com', 'Илья', 'Новиков', [director_group]),
+    # Руководители (два — для проверки изоляции данных)
+    ('marina.vasilyeva', 'marina@example.com', 'Марина', 'Васильева', [manager_group]),
+    ('alexey.fedorov', 'alexey@example.com', 'Алексей', 'Фёдоров', [manager_group]),
+    # Исполнители
+    ('anna.petrova', 'anna@example.com', 'Анна', 'Петрова', [executor_group]),
+    ('sergey.smirnov', 'sergey@example.com', 'Сергей', 'Смирнов', [executor_group]),
+    ('dmitry.volkov', 'dmitry@example.com', 'Дмитрий', 'Волков', [executor_group]),
+    ('elena.sokolova', 'elena@example.com', 'Елена', 'Соколова', [executor_group]),
+    # Исполнитель без руководителя (для Насти)
+    ('nikolay.ustinov', 'nikolay@example.com', 'Николай', 'Устинов', [executor_group]),
 ]
 
 created = {}
@@ -89,9 +96,13 @@ for username, email, first_name, last_name, groups in users_data:
     created[username] = user
 
 director = created['director']
-manager = created['manager']
-executor1 = created['executor1']
-executor2 = created['executor2']
+manager = created['marina.vasilyeva']
+manager2 = created['alexey.fedorov']
+executor1 = created['anna.petrova']
+executor2 = created['sergey.smirnov']
+executor3 = created['dmitry.volkov']
+executor4 = created['elena.sokolova']
+executor_no_manager = created['nikolay.ustinov']
 
 print('✓ Пользователи созданы')
 
@@ -99,8 +110,12 @@ print('✓ Пользователи созданы')
 # 3. СВЯЗЬ РУКОВОДИТЕЛЬ — ИСПОЛНИТЕЛИ
 # ---------------------------------------------------
 
-Employee.objects.get_or_create(manager=manager, employee=executor1)
-Employee.objects.get_or_create(manager=manager, employee=executor2)
+for emp in [executor1, executor2, executor3, executor4]:
+    Employee.objects.get_or_create(
+        employee=emp,
+        defaults={'manager': manager}
+    )
+
 print('✓ Связи руководитель-исполнители созданы')
 
 # ---------------------------------------------------
@@ -109,13 +124,14 @@ print('✓ Связи руководитель-исполнители созда
 
 print('Создаю проекты...')
 
+# Проекты Марины
 p1, _ = Project.objects.get_or_create(
-    name='Разработка CRM-системы',
+    name='Внедрение CRM-системы',
     defaults={
-        'description': 'Создание системы для управления взаимоотношениями с клиентами',
-        'start_date_plan': date(2026, 1, 15),
-        'end_date_plan': date(2026, 6, 30),
-        'start_date_fact': date(2026, 1, 20),
+        'description': 'Автоматизация работы отдела продаж и клиентского сервиса',
+        'start_date_plan': date(2026, 4, 1),
+        'end_date_plan': date(2026, 7, 30),
+        'start_date_fact': date(2026, 4, 5),
         'status': status_active,
         'priority': pr_high,
         'manager': manager,
@@ -123,34 +139,90 @@ p1, _ = Project.objects.get_or_create(
 )
 
 p2, _ = Project.objects.get_or_create(
-    name='Внедрение ERP-модуля',
+    name='Мобильное приложение',
     defaults={
-        'description': 'Интеграция модуля управления ресурсами предприятия',
-        'start_date_plan': date(2026, 2, 1),
-        'end_date_plan': date(2026, 5, 15),
-        'start_date_fact': date(2026, 2, 1),
-        'end_date_fact': date(2026, 5, 20),
-        'status': status_completed,
-        'priority': pr_critical,
+        'description': 'Разработка нативного приложения для iOS и Android',
+        'start_date_plan': date(2026, 5, 1),
+        'end_date_plan': date(2026, 9, 15),
+        'status': status_active,
+        'priority': pr_high,
         'manager': manager,
     }
 )
 
 p3, _ = Project.objects.get_or_create(
-    name='Мобильное приложение',
+    name='Корпоративный портал',
     defaults={
-        'description': 'Разработка приложения для iOS и Android',
-        'start_date_plan': date(2026, 3, 1),
-        'end_date_plan': date(2026, 8, 1),
+        'description': 'Единая точка входа для всех внутренних сервисов компании',
+        'start_date_plan': date(2026, 5, 15),
+        'end_date_plan': date(2026, 8, 30),
         'status': status_active,
         'priority': pr_medium,
         'manager': manager,
     }
 )
 
-p1.participants.add(executor1, executor2)
-p2.participants.add(executor1)
-p3.participants.add(executor1, executor2)
+# Для Насти: проект с перерасходом бюджета
+p4, _ = Project.objects.get_or_create(
+    name='Система аналитики продаж',
+    defaults={
+        'description': 'Внедрение BI-инструментов для анализа эффективности',
+        'start_date_plan': date(2026, 1, 10),
+        'end_date_plan': date(2026, 4, 30),
+        'start_date_fact': date(2026, 1, 15),
+        'status': status_active,
+        'priority': pr_critical,
+        'manager': manager,
+    }
+)
+
+# Для Насти: проект с просроченным сроком
+p5, _ = Project.objects.get_or_create(
+    name='Обновление инфраструктуры',
+    defaults={
+        'description': 'Модернизация серверного оборудования и сети',
+        'start_date_plan': date(2026, 2, 1),
+        'end_date_plan': date(2026, 4, 15),
+        'start_date_fact': date(2026, 2, 5),
+        'status': status_paused,
+        'priority': pr_high,
+        'manager': manager,
+    }
+)
+
+# Для Насти: пустой проект
+p6, _ = Project.objects.get_or_create(
+    name='Чат-бот для поддержки',
+    defaults={
+        'description': 'Разработка бота для автоматизации ответов клиентам',
+        'start_date_plan': date(2026, 7, 1),
+        'end_date_plan': date(2026, 10, 1),
+        'status': status_active,
+        'priority': pr_low,
+        'manager': manager,
+    }
+)
+
+# Проект второго руководителя (для проверки изоляции)
+p7, _ = Project.objects.get_or_create(
+    name='Внутренний аудит ИТ-систем',
+    defaults={
+        'description': 'Комплексная проверка безопасности и отказоустойчивости',
+        'start_date_plan': date(2026, 5, 1),
+        'end_date_plan': date(2026, 6, 30),
+        'status': status_active,
+        'priority': pr_medium,
+        'manager': manager2,
+    }
+)
+
+# Участники проектов
+p1.participants.add(executor1, executor2, executor3, executor4)
+p2.participants.add(executor1, executor2, executor3)
+p3.participants.add(executor2, executor3, executor4)
+p4.participants.add(executor1, executor2)
+p5.participants.add(executor1, executor3)
+p7.participants.add(executor2)
 
 print('✓ Проекты созданы')
 
@@ -160,72 +232,219 @@ print('✓ Проекты созданы')
 
 print('Создаю задачи...')
 
-t1_1 = Task.objects.create(
-    title='Разработка архитектуры CRM',
-    project=p1, description='Спроектировать модульную архитектуру системы',
-    priority='high', planned_start_date=timezone.now() - timedelta(days=60),
-    planned_end_date=timezone.now() - timedelta(days=30),
-    assigned_to=executor1, author=manager, status=ts_done
-)
+now = timezone.now()
 
-t1_2 = Task.objects.create(
-    title='Создание интерфейса CRM',
-    project=p1, description='Разработать UI для менеджеров по продажам',
-    priority='high', planned_start_date=timezone.now() - timedelta(days=30),
-    planned_end_date=timezone.now() + timedelta(days=15),
-    assigned_to=executor2, author=manager, status=ts_in_progress
+# --- Задачи для Анны Петровой (CRM) ---
+task_anna_1 = Task.objects.create(
+    title='Разработка модуля контактов', project=p1,
+    description='CRUD-операции для управления контактами клиентов',
+    priority='high', planned_start_date=now - timedelta(days=14),
+    planned_end_date=now + timedelta(days=7),
+    assigned_to=executor1, author=manager, status=ts_in_progress
 )
-
-t1_3 = Task.objects.create(
-    title='Тестирование CRM',
-    project=p1, description='Провести функциональное и нагрузочное тестирование',
-    priority='medium', planned_start_date=timezone.now() - timedelta(days=10),
-    planned_end_date=timezone.now() + timedelta(days=30),
+task_anna_2 = Task.objects.create(
+    title='Интеграция с 1С', project=p1,
+    description='Настройка обмена данными между CRM и учётной системой',
+    priority='critical', planned_start_date=now - timedelta(days=10),
+    planned_end_date=now - timedelta(days=1),
     assigned_to=executor1, author=manager, status=ts_review
 )
-
-t2_1 = Task.objects.create(
-    title='Настройка ERP-модуля',
-    project=p2, description='Адаптировать ERP под бизнес-процессы компании',
-    priority='critical', planned_start_date=timezone.now() - timedelta(days=90),
-    planned_end_date=timezone.now() - timedelta(days=45),
+task_anna_3 = Task.objects.create(
+    title='Дашборд для руководителя', project=p1,
+    description='Аналитическая панель с графиками по продажам',
+    priority='medium', planned_start_date=now + timedelta(days=3),
+    planned_end_date=now + timedelta(days=20),
+    assigned_to=executor1, author=manager, status=ts_new
+)
+task_anna_4 = Task.objects.create(
+    title='Обучение сотрудников', project=p1,
+    description='Провести тренинг по работе с новой CRM',
+    priority='medium', planned_start_date=now + timedelta(days=14),
+    planned_end_date=now + timedelta(days=16),
+    assigned_to=executor1, author=manager, status=ts_planned
+)
+task_anna_5 = Task.objects.create(
+    title='Миграция данных из Excel', project=p1,
+    description='Перенос клиентской базы из старых таблиц в CRM',
+    priority='high', planned_start_date=now - timedelta(days=7),
+    planned_end_date=now - timedelta(days=1),  # просрочена (срок вчера)
+    assigned_to=executor1, author=manager, status=ts_in_progress
+)
+task_anna_6 = Task.objects.create(
+    title='Настройка почтовых уведомлений', project=p1,
+    description='Автоматические письма клиентам при изменении статуса сделки',
+    priority='medium', planned_start_date=now - timedelta(days=21),
+    planned_end_date=now - timedelta(days=5),
     assigned_to=executor1, author=manager, status=ts_done
 )
 
-t3_1 = Task.objects.create(
-    title='Дизайн мобильного приложения',
-    project=p3, description='Разработать макеты всех экранов',
-    priority='medium', planned_start_date=timezone.now() - timedelta(days=15),
-    planned_end_date=timezone.now() + timedelta(days=5),
-    assigned_to=executor2, author=manager, status=ts_in_progress
+# Подзадачи для «Миграция данных из Excel»
+sub_1 = Task.objects.create(
+    title='Проверить дубликаты', project=p1,
+    description='Найти и удалить повторяющиеся записи клиентов',
+    priority='high', planned_start_date=now - timedelta(days=5),
+    planned_end_date=now - timedelta(days=3),
+    assigned_to=executor1, author=manager, status=ts_done,
+    parent_task=task_anna_5
+)
+sub_2 = Task.objects.create(
+    title='Согласовать формат импорта', project=p1,
+    description='Утвердить структуру CSV-файла с заказчиком',
+    priority='medium', planned_start_date=now - timedelta(days=3),
+    planned_end_date=now + timedelta(days=2),
+    assigned_to=executor1, author=manager, status=ts_new,
+    parent_task=task_anna_5
+)
+sub_3 = Task.objects.create(
+    title='Написать скрипт валидации', project=p1,
+    description='Скрипт проверки корректности данных перед импортом',
+    priority='high', planned_start_date=now + timedelta(days=2),
+    planned_end_date=now + timedelta(days=5),
+    assigned_to=executor1, author=manager, status=ts_new,
+    parent_task=task_anna_5
 )
 
-t3_2 = Task.objects.create(
-    title='Разработка API для приложения',
-    project=p3, description='Создать REST API для мобильного клиента',
-    priority='high', planned_start_date=timezone.now() + timedelta(days=5),
-    planned_end_date=timezone.now() + timedelta(days=55),
-    assigned_to=executor1, author=manager, status=ts_new
+# --- Задачи для Сергея Смирнова ---
+task_sergey_1 = Task.objects.create(
+    title='Дизайн корпоративного портала', project=p3,
+    description='Разработать макеты всех страниц портала',
+    priority='high', planned_start_date=now - timedelta(days=10),
+    planned_end_date=now + timedelta(days=10),
+    assigned_to=executor2, author=manager, status=ts_in_progress
+)
+task_sergey_2 = Task.objects.create(
+    title='Дизайн мобильного приложения', project=p2,
+    description='Макеты экранов для iOS и Android',
+    priority='medium', planned_start_date=now + timedelta(days=5),
+    planned_end_date=now + timedelta(days=25),
+    assigned_to=executor2, author=manager, status=ts_new
+)
+task_sergey_3 = Task.objects.create(
+    title='Анимация переходов', project=p2,
+    description='Проработка микроанимаций между экранами приложения',
+    priority='low', planned_start_date=now - timedelta(days=3),
+    planned_end_date=now + timedelta(days=7),
+    assigned_to=executor2, author=manager, status=ts_in_progress
+)
+task_sergey_4 = Task.objects.create(
+    title='Иконки приложения', project=p2,
+    description='Разработать набор иконок для всех разделов',
+    priority='medium', planned_start_date=now + timedelta(days=10),
+    planned_end_date=now + timedelta(days=17),
+    assigned_to=executor2, author=manager, status=ts_planned
+)
+
+# --- Задачи для Дмитрия Волкова ---
+task_dmitry_1 = Task.objects.create(
+    title='Разработка API', project=p2,
+    description='REST API для мобильного клиента',
+    priority='high', planned_start_date=now - timedelta(days=5),
+    planned_end_date=now + timedelta(days=15),
+    assigned_to=executor3, author=manager, status=ts_in_progress
+)
+task_dmitry_2 = Task.objects.create(
+    title='Тестирование API', project=p2,
+    description='Написание и прогон автотестов',
+    priority='medium', planned_start_date=now + timedelta(days=16),
+    planned_end_date=now + timedelta(days=25),
+    assigned_to=executor3, author=manager, status=ts_new
+)
+task_dmitry_3 = Task.objects.create(
+    title='Документация для разработчиков', project=p1,
+    description='Описание архитектуры CRM и инструкции по развёртыванию',
+    priority='low', planned_start_date=now + timedelta(days=7),
+    planned_end_date=now + timedelta(days=14),
+    assigned_to=executor3, author=manager, status=ts_planned
+)
+task_dmitry_4 = Task.objects.create(
+    title='Рефакторинг старого кода', project=p3,
+    description='Приведение легаси-модулей портала к общим стандартам',
+    priority='medium', planned_start_date=now + timedelta(days=3),
+    planned_end_date=now + timedelta(days=14),
+    assigned_to=executor3, author=manager, status=ts_new
+)
+
+# --- Задачи для Елены Соколовой ---
+task_elena_1 = Task.objects.create(
+    title='Верстка главной страницы', project=p3,
+    description='Адаптивная вёрстка главной страницы портала по макетам',
+    priority='high', planned_start_date=now - timedelta(days=7),
+    planned_end_date=now + timedelta(days=5),
+    assigned_to=executor4, author=manager, status=ts_in_progress
+)
+task_elena_2 = Task.objects.create(
+    title='Верстка личного кабинета', project=p3,
+    description='Страница профиля сотрудника с настройками',
+    priority='high', planned_start_date=now - timedelta(days=5),
+    planned_end_date=now - timedelta(days=1),
+    assigned_to=executor4, author=manager, status=ts_review
+)
+task_elena_3 = Task.objects.create(
+    title='Адаптив под мобильные', project=p3,
+    description='Адаптация всех страниц портала под планшеты и смартфоны',
+    priority='medium', planned_start_date=now + timedelta(days=5),
+    planned_end_date=now + timedelta(days=15),
+    assigned_to=executor4, author=manager, status=ts_new
+)
+task_elena_4 = Task.objects.create(
+    title='Тестирование верстки', project=p3,
+    description='Кроссбраузерное тестирование и исправление багов',
+    priority='low', planned_start_date=now + timedelta(days=16),
+    planned_end_date=now + timedelta(days=20),
+    assigned_to=executor4, author=manager, status=ts_planned
+)
+
+# --- Задача для второго руководителя ---
+Task.objects.create(
+    title='Проверка безопасности серверов', project=p7,
+    description='Аудит конфигурации и прав доступа',
+    priority='high', planned_start_date=now - timedelta(days=3),
+    planned_end_date=now + timedelta(days=10),
+    assigned_to=executor2, author=manager2, status=ts_in_progress
+)
+
+# --- Просроченная задача (для Насти) ---
+Task.objects.create(
+    title='Настройка BI-дашбордов', project=p4,
+    description='Подключение источников данных и настройка визуализаций',
+    priority='critical', planned_start_date=now - timedelta(days=30),
+    planned_end_date=now - timedelta(days=5),
+    assigned_to=executor1, author=manager, status=ts_in_progress
 )
 
 print('✓ Задачи созданы')
 
 # ---------------------------------------------------
-# 6. НАЗНАЧЕНИЯ
+# 6. НАЗНАЧЕНИЯ (плановые и фактические часы)
 # ---------------------------------------------------
 
 print('Создаю назначения...')
 
-assignments = [
-    (t1_1, executor1, 40, 38),
-    (t1_2, executor2, 60, 25),
-    (t1_3, executor1, 80, 0),
-    (t2_1, executor1, 120, 115),
-    (t3_1, executor2, 40, 10),
-    (t3_2, executor1, 100, 0),
+assignments_data = [
+    (task_anna_1, executor1, 32, 18),
+    (task_anna_2, executor1, 24, 22),
+    (task_anna_3, executor1, 40, 0),
+    (task_anna_4, executor1, 8, 0),
+    (task_anna_5, executor1, 16, 10),
+    (task_anna_6, executor1, 8, 8),
+    (sub_1, executor1, 4, 4),
+    (sub_2, executor1, 6, 0),
+    (sub_3, executor1, 8, 0),
+    (task_sergey_1, executor2, 40, 22),
+    (task_sergey_2, executor2, 60, 0),
+    (task_sergey_3, executor2, 16, 8),
+    (task_sergey_4, executor2, 12, 0),
+    (task_dmitry_1, executor3, 40, 16),
+    (task_dmitry_2, executor3, 30, 0),
+    (task_dmitry_3, executor3, 12, 0),
+    (task_dmitry_4, executor3, 24, 0),
+    (task_elena_1, executor4, 32, 20),
+    (task_elena_2, executor4, 20, 14),
+    (task_elena_3, executor4, 30, 0),
+    (task_elena_4, executor4, 12, 0),
 ]
 
-for task, user, planned, actual in assignments:
+for task, user, planned, actual in assignments_data:
     TaskAssignment.objects.get_or_create(
         task=task, user=user,
         defaults={'planned_hours': planned, 'actual_hours': actual, 'assigned_at': timezone.now()}
@@ -234,20 +453,93 @@ for task, user, planned, actual in assignments:
 print('✓ Назначения созданы')
 
 # ---------------------------------------------------
-# 7. КPI
+# 7. КОММЕНТАРИИ
+# ---------------------------------------------------
+
+print('Создаю комментарии...')
+
+Comment.objects.get_or_create(
+    task=task_anna_2, author=executor1,
+    defaults={'text': 'Интеграция настроена, проверила на тестовых данных. Жду проверки.'}
+)
+Comment.objects.get_or_create(
+    task=task_anna_2, author=manager,
+    defaults={'text': 'Принято, но нужно добавить обработку ошибок при таймауте.'}
+)
+Comment.objects.get_or_create(
+    task=task_sergey_1, author=executor2,
+    defaults={'text': 'Макеты готовы, загрузил в Figma. Жду согласования.'}
+)
+Comment.objects.get_or_create(
+    task=task_elena_1, author=executor4,
+    defaults={'text': 'Возникли сложности с сеткой, нужно больше времени.'}
+)
+
+print('✓ Комментарии созданы')
+
+# ---------------------------------------------------
+# 8. ОПОВЕЩЕНИЯ
+# ---------------------------------------------------
+
+print('Создаю оповещения...')
+
+Notification.objects.get_or_create(
+    user=manager, task=task_anna_2,
+    defaults={'message': 'Анна Петрова перевела задачу «Интеграция с 1С» в статус «На проверке».'}
+)
+Notification.objects.get_or_create(
+    user=executor1, task=task_anna_2,
+    defaults={'message': 'Руководитель оставила комментарий к задаче «Интеграция с 1С».'}
+)
+Notification.objects.get_or_create(
+    user=manager, task=task_elena_2,
+    defaults={'message': 'Елена Соколова перевела задачу «Верстка личного кабинета» в статус «На проверке».'}
+)
+Notification.objects.get_or_create(
+    user=executor1, task=task_anna_5,
+    defaults={'message': 'Задача «Миграция данных из Excel» просрочена!'}
+)
+Notification.objects.get_or_create(
+    user=executor2, task=task_sergey_2,
+    defaults={'message': 'Руководитель переоткрыл задачу «Дизайн мобильного приложения».'}
+)
+
+# Непрочитанные уведомления для демонстрации счётчика
+Notification.objects.get_or_create(
+    user=manager, task=task_elena_2,
+    defaults={'message': 'Елена Соколова оставила комментарий к задаче «Верстка личного кабинета».',
+              'is_read': False}
+)
+Notification.objects.get_or_create(
+    user=manager, task=task_sergey_1,
+    defaults={'message': 'Сергей Смирнов оставил комментарий к задаче «Дизайн корпоративного портала».',
+              'is_read': False}
+)
+
+print('✓ Оповещения созданы')
+
+# ---------------------------------------------------
+# 9. KPI
 # ---------------------------------------------------
 
 print('Создаю KPI...')
 
 kpi_data = [
     (p1, 'Процент выполнения', 45.00),
-    (p1, 'Индекс соблюдения сроков', 0.85),
-    (p1, 'Утилизация ресурсов', 72.50),
-    (p2, 'Процент выполнения', 100.00),
-    (p2, 'Индекс соблюдения сроков', 0.95),
-    (p3, 'Процент выполнения', 20.00),
-    (p3, 'Индекс соблюдения сроков', 0.70),
-    (p3, 'Утилизация ресурсов', 55.00),
+    (p1, 'Индекс соблюдения сроков', 85.00),
+    (p1, 'Использование ресурсов', 72.50),
+    (p2, 'Процент выполнения', 25.00),
+    (p2, 'Индекс соблюдения сроков', 78.00),
+    (p2, 'Использование ресурсов', 48.00),
+    (p3, 'Процент выполнения', 38.00),
+    (p3, 'Индекс соблюдения сроков', 90.00),
+    (p3, 'Использование ресурсов', 55.00),
+    (p4, 'Процент выполнения', 60.00),
+    (p4, 'Индекс соблюдения сроков', 70.00),
+    (p4, 'Использование ресурсов', 90.00),
+    (p5, 'Процент выполнения', 15.00),
+    (p5, 'Индекс соблюдения сроков', 40.00),
+    (p5, 'Использование ресурсов', 20.00),
 ]
 
 for project, name, value in kpi_data:
@@ -256,7 +548,7 @@ for project, name, value in kpi_data:
 print('✓ KPI созданы')
 
 # ---------------------------------------------------
-# 8. РИСКИ
+# 10. РИСКИ (для Насти)
 # ---------------------------------------------------
 
 print('Создаю риски...')
@@ -264,15 +556,12 @@ print('Создаю риски...')
 risk1, _ = Risk.objects.get_or_create(
     title='Уход ключевого разработчика',
     defaults={
-        'project': p1,
-        'task': t1_1,
+        'project': p1, 'task': task_anna_1,
         'description': 'Ведущий разработчик может покинуть проект',
-        'probability': prob_medium,
-        'impact': imp_high,
-        'status': risk_analysis,
-        'responsible': manager,
+        'probability': prob_medium, 'impact': imp_high,
+        'status': risk_analysis, 'responsible': manager,
         'mitigation_plan': 'Подготовить второго сотрудника, документация передана',
-        'identified_at': date(2026, 2, 1),
+        'identified_at': date(2026, 4, 10),
     }
 )
 
@@ -280,124 +569,135 @@ risk2, _ = Risk.objects.get_or_create(
     title='Задержка поставки оборудования',
     defaults={
         'project': p1,
-        'description': 'Серверное оборудование может быть задержано поставщиком',
-        'probability': prob_low,
-        'impact': imp_medium,
-        'status': risk_new,
-        'responsible': manager,
+        'description': 'Серверное оборудование задержано поставщиком',
+        'probability': prob_low, 'impact': imp_medium,
+        'status': risk_new, 'responsible': manager,
         'mitigation_plan': 'Поиск альтернативных поставщиков',
-        'identified_at': date(2026, 2, 10),
+        'identified_at': date(2026, 4, 20),
     }
 )
 
+# Для Насти: риск со статусом «Приняты меры»
 risk3, _ = Risk.objects.get_or_create(
-    title='Превышение бюджета',
+    title='Нарушение сроков тестирования',
     defaults={
-        'project': p3,
-        'description': 'Расходы могут превысить плановый бюджет',
-        'probability': prob_high,
-        'impact': imp_critical,
-        'status': risk_analysis,
-        'responsible': manager,
-        'mitigation_plan': 'Еженедельный мониторинг расходов',
-        'identified_at': date(2026, 3, 1),
+        'project': p2,
+        'description': 'Команда тестирования не укладывается в график',
+        'probability': prob_high, 'impact': imp_medium,
+        'status': risk_mitigated, 'responsible': manager,
+        'mitigation_plan': 'Привлечён дополнительный тестировщик',
+        'identified_at': date(2026, 5, 1),
     }
 )
 
+# Для Насти: риск со статусом «Закрыт»
 risk4, _ = Risk.objects.get_or_create(
-    title='Недостаток компетенций команды',
+    title='Отказ облачного провайдера',
     defaults={
         'project': p3,
-        'description': 'Команда не имеет опыта разработки мобильных приложений',
-        'probability': prob_high,
-        'impact': imp_high,
-        'status': risk_analysis,
-        'responsible': manager,
-        'mitigation_plan': 'Провести обучение, нанять консультанта',
-        'identified_at': date(2026, 3, 5),
+        'description': 'Облачный провайдер может прекратить обслуживание',
+        'probability': prob_low, 'impact': imp_critical,
+        'status': risk_closed, 'responsible': manager,
+        'mitigation_plan': 'Настроено резервное копирование на второй ЦОД',
+        'identified_at': date(2026, 5, 5),
+    }
+)
+
+# Для Насти: критический риск со статусом «Выявлен»
+risk5, _ = Risk.objects.get_or_create(
+    title='Утечка персональных данных клиентов',
+    defaults={
+        'project': p1,
+        'description': 'Возможна утечка данных из-за уязвимости в модуле авторизации',
+        'probability': prob_medium, 'impact': imp_critical,
+        'status': risk_new, 'responsible': manager,
+        'mitigation_plan': 'Провести аудит безопасности, обновить протоколы шифрования',
+        'identified_at': date(2026, 5, 10),
     }
 )
 
 print('✓ Риски созданы')
 
 # ---------------------------------------------------
-# 9. ИСТОРИЯ ИЗМЕНЕНИЙ РИСКОВ
+# 11. ИСТОРИЯ ИЗМЕНЕНИЙ РИСКОВ (для Насти)
 # ---------------------------------------------------
 
 print('Создаю историю рисков...')
 
 RiskHistory.objects.get_or_create(
-    risk=risk1,
-    defaults={
-        'user': manager,
-        'old_status': risk_new,
-        'new_status': risk_analysis,
-        'comment': 'Начат анализ риска, назначен ответственный',
-        'changed_at': timezone.now(),
-    }
+    risk=risk1, user=manager,
+    defaults={'old_status': risk_new, 'new_status': risk_analysis,
+              'comment': 'Начат анализ риска, назначен ответственный', 'changed_at': timezone.now()}
 )
-
 RiskHistory.objects.get_or_create(
-    risk=risk3,
-    defaults={
-        'user': manager,
-        'old_status': risk_new,
-        'new_status': risk_analysis,
-        'comment': 'Риск взят в работу, определён план реагирования',
-        'changed_at': timezone.now(),
-    }
+    risk=risk3, user=manager,
+    defaults={'old_status': risk_analysis, 'new_status': risk_mitigated,
+              'comment': 'Приняты меры: привлечён дополнительный тестировщик', 'changed_at': timezone.now()}
+)
+RiskHistory.objects.get_or_create(
+    risk=risk4, user=manager,
+    defaults={'old_status': risk_mitigated, 'new_status': risk_closed,
+              'comment': 'Риск закрыт: настроено резервное копирование', 'changed_at': timezone.now()}
+)
+RiskHistory.objects.get_or_create(
+    risk=risk5, user=manager,
+    defaults={'old_status': None, 'new_status': risk_new,
+              'comment': 'Риск выявлен в ходе планового аудита', 'changed_at': timezone.now()}
 )
 
 print('✓ История рисков создана')
 
 # ---------------------------------------------------
-# 10. ОТСУТСТВИЯ СОТРУДНИКОВ
+# 12. ОТСУТСТВИЯ СОТРУДНИКОВ
 # ---------------------------------------------------
 
 print('Создаю отсутствия...')
 
 UserAbsence.objects.get_or_create(
-    user=executor1,
-    start_date=date(2026, 4, 10),
-    defaults={
-        'end_date': date(2026, 4, 24),
-        'absence_type': abs_vacation,
-        'reason': 'Ежегодный оплачиваемый отпуск',
-    }
+    user=executor1, start_date=date(2026, 4, 10),
+    defaults={'end_date': date(2026, 4, 24), 'absence_type': abs_vacation,
+              'reason': 'Ежегодный оплачиваемый отпуск'}
 )
-
 UserAbsence.objects.get_or_create(
-    user=executor2,
-    start_date=date(2026, 5, 5),
-    defaults={
-        'end_date': date(2026, 5, 8),
-        'absence_type': abs_sick,
-        'reason': 'ОРВИ',
-    }
+    user=executor2, start_date=date(2026, 5, 5),
+    defaults={'end_date': date(2026, 5, 8), 'absence_type': abs_sick,
+              'reason': 'ОРВИ'}
+)
+# Для Насти: отсутствие типа «Командировка»
+UserAbsence.objects.get_or_create(
+    user=executor3, start_date=date(2026, 5, 20),
+    defaults={'end_date': date(2026, 5, 23), 'absence_type': abs_trip,
+              'reason': 'Конференция по мобильной разработке'}
+)
+# Отсутствие на текущую неделю (для демонстрации загрузки)
+UserAbsence.objects.get_or_create(
+    user=executor4, start_date=date.today(),
+    defaults={'end_date': date.today() + timedelta(days=2),
+              'absence_type': abs_dayoff, 'reason': 'Семейные обстоятельства'}
 )
 
 print('✓ Отсутствия созданы')
 
 # ---------------------------------------------------
-# 11. БЮДЖЕТЫ ПРОЕКТОВ
+# 13. БЮДЖЕТЫ ПРОЕКТОВ
 # ---------------------------------------------------
 
 print('Создаю бюджеты...')
 
 budgets_data = [
-    (p1, 1500000, 1200000, date(2026, 1, 10)),
-    (p2, 800000, 800000, date(2026, 1, 25)),
-    (p3, 2000000, 600000, date(2026, 2, 15)),
+    (p1, 1500000, 1200000, date(2026, 4, 1)),
+    (p2, 2000000, 600000, date(2026, 4, 25)),
+    (p3, 800000, 350000, date(2026, 5, 10)),
+    # Для Насти: проект с перерасходом бюджета
+    (p4, 900000, 1050000, date(2026, 1, 5)),
+    # Для Насти: проект с просроченным сроком
+    (p5, 500000, 480000, date(2026, 1, 25)),
 ]
 
 for project, planned, actual, approved in budgets_data:
     Budget.objects.get_or_create(
         project=project,
-        defaults={
-            'planned_amount': planned,
-            'actual_amount': actual,
-            'approved_at': approved,
-        }
+        defaults={'planned_amount': planned, 'actual_amount': actual, 'approved_at': approved}
     )
 
 print('✓ Бюджеты созданы')
@@ -410,7 +710,11 @@ print('БАЗА ДАННЫХ УСПЕШНО ЗАПОЛНЕНА')
 print('=' * 50)
 print()
 print('Пользователи для входа:')
-print('  manager   / testpassword123  (руководитель)')
-print('  executor1 / testpassword123  (исполнитель)')
-print('  executor2 / testpassword123  (исполнитель)')
-print('  director  / testpassword123  (директор)')
+print('  marina.vasilyeva  / testpassword123  (руководитель)')
+print('  alexey.fedorov    / testpassword123  (руководитель 2)')
+print('  anna.petrova      / testpassword123  (исполнитель)')
+print('  sergey.smirnov    / testpassword123  (исполнитель)')
+print('  dmitry.volkov     / testpassword123  (исполнитель)')
+print('  elena.sokolova    / testpassword123  (исполнитель)')
+print('  nikolay.ustinov   / testpassword123  (исполнитель без руководителя)')
+print('  director          / testpassword123  (директор)')

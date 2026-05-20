@@ -47,8 +47,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Ваши приложения
-    'task_management',      # ← твоё
+    'task_management',      # ← Вика
     'resource_planning',    # ← Бегимай
+    'api', # Настя
 ]
 
 MIDDLEWARE = [
@@ -129,7 +130,7 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Moscow'
 
 USE_I18N = True
 

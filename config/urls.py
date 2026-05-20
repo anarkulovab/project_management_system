@@ -28,4 +28,5 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='/accounts/login/'), name='logout'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('accounts/redirect/', redirect_by_role, name='redirect_by_role'),
+    path('api/', include('api.urls')),
 ]
