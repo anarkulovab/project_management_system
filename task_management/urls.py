@@ -19,4 +19,5 @@ urlpatterns = [
     path('change-password/', views.change_password, name='change-password'),
     path('change-username/', views.change_username, name='change-username'),
     path('notifications/mark-all-read/', views.mark_all_read, name='mark_all_read'),
+    path('subtask/<int:subtask_id>/delete/', views.delete_subtask, name='delete-subtask'),
 ]

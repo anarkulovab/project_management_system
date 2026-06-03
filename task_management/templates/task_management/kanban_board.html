@@ -6,45 +6,24 @@
 
 {% block extra_head %}
 <style>
-    .filter-bar {
-        display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;
-    }
-    .filter-bar select {
-        padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border);
-        background: #fff; color: var(--text-main); font-size: 13px; font-family: inherit;
-    }
-
-    .kanban-wrapper {
-        display: flex; gap: 16px; overflow-x: auto; padding-bottom: 10px;
-    }
-    .kanban-column {
-        min-width: 280px; max-width: 320px; flex: 1;
-        background: #fff; border: 1px solid var(--border);
-        border-radius: 14px; padding: 14px; box-shadow: var(--shadow);
-    }
-    .column-header {
-        font-weight: 600; font-size: 13px; text-align: center;
-        padding: 8px 12px; border-radius: 10px; margin-bottom: 12px; color: #fff;
-    }
-    .task-card {
-        background: #fff; border: 1px solid var(--border);
-        border-radius: 10px; padding: 12px; margin-bottom: 8px;
-        cursor: grab; transition: all 0.15s; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-    }
+    .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+    .filter-bar select { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: #fff; color: var(--text-main); font-size: 13px; font-family: inherit; }
+    .kanban-wrapper { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 10px; }
+    .kanban-column { min-width: 280px; max-width: 320px; flex: 1; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+    .column-header { font-weight: 600; font-size: 13px; text-align: center; padding: 8px 12px; border-radius: 10px; margin-bottom: 12px; color: #fff; }
+    .task-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: grab; transition: all 0.15s; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
     .task-card:hover { border-color: var(--role-member); box-shadow: 0 6px 16px rgba(155,89,182,0.12); }
     .task-card:active { cursor: grabbing; }
     .task-card.dragging { opacity: 0.35; }
     .kanban-column.drag-over { background: #faf5fc; border: 2px dashed var(--role-member); }
     .task-card.inactive { opacity: 0.55; cursor: not-allowed; background: #f9f9fb; }
-
+    .task-card.locked { opacity: 0.7; cursor: default; background: #f5f5f5; }
     .priority-high { border-left: 4px solid var(--danger); }
     .priority-medium { border-left: 4px solid var(--warning); }
     .priority-low { border-left: 4px solid var(--success); }
     .priority-critical { border-left: 4px solid #6f42c1; }
-
     .task-title { color: var(--text-heading); text-decoration: none; font-weight: 600; font-size: 14px; }
     .task-title:hover { color: var(--role-member); }
-
     .badge-priority { font-size: 0.7rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
     .badge-high { background: #fde9e7; color: var(--danger); }
     .badge-medium { background: #fef5ee; color: var(--warning); }
@@ -52,7 +31,7 @@
     .badge-critical { background: #f3eafb; color: #6f42c1; }
     .task-meta { color: var(--text-secondary); font-size: 12px; }
     .subtasks-list { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
-    .subtask-item { cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+    .subtask-item { cursor: pointer; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; }
     .subtask-item input[type="checkbox"] { accent-color: var(--role-member); }
 </style>
 {% endblock %}
@@ -61,9 +40,7 @@
 
 {% if messages %}
 <div class="messages">
-    {% for message in messages %}
-        <div class="msg {{ message.tags }}">{{ message }}</div>
-    {% endfor %}
+    {% for message in messages %}<div class="msg {{ message.tags }}">{{ message }}</div>{% endfor %}
 </div>
 {% endif %}
 
@@ -101,22 +78,14 @@
         </div>
 
         {% for task in status.filtered_tasks %}
-        {% if status.name == 'Запланирована' %}
-        <div class="task-card priority-{{ task.priority }} {% if not task.is_active %}inactive{% endif %}"
-             {% if task.is_active %}draggable="true" data-task-id="{{ task.id }}" ondragstart="handleDragStart(event)"{% endif %}>
-        {% else %}
-        <div class="task-card priority-{{ task.priority }}"
-             draggable="true" data-task-id="{{ task.id }}" ondragstart="handleDragStart(event)">
-        {% endif %}
+        <div class="task-card priority-{{ task.priority }}{% if status.name == 'Готово' %} locked{% endif %}"
+             data-task-id="{{ task.id }}"
+             {% if status.name != 'Готово' %}draggable="true" ondragstart="handleDragStart(event)"{% endif %}>
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
                     <a href="{% url 'task-detail' task.id %}" class="task-title">{{ task.title }}</a>
                     <div style="display: flex; align-items: center; margin-top: 4px;">
-                        {% if status.name == 'Запланирована' %}
-                            <span class="task-meta">Старт: {{ task.start_date_display }}</span>
-                        {% else %}
-                            <span class="task-meta">Срок: {{ task.planned_end_date|date:"d.m.Y" }}</span>
-                        {% endif %}
+                        <span class="task-meta">Срок: {{ task.planned_end_date|date:"d.m.Y" }}</span>
                         <span class="badge-priority badge-{{ task.priority }}" style="margin-left: 8px;">{{ task.get_priority_display }}</span>
                     </div>
                     <div class="task-meta" style="margin-top: 2px;">
@@ -130,10 +99,11 @@
             {% if task.subtasks.exists %}
             <div class="subtasks-list" style="display: none;">
                 {% for subtask in task.subtasks.all %}
-                <label class="subtask-item" style="display: flex; align-items: center;">
+                <label class="subtask-item">
                     <input type="checkbox" class="subtask-check" style="margin-right: 6px;"
                            data-subtask-id="{{ subtask.id }}"
                            {% if subtask.status.name == 'Готово' %}checked{% endif %}
+                           {% if task.status.name == 'На проверке' or task.status.name == 'Готово' %}disabled{% endif %}
                            onchange="toggleSubtaskDone(this)">
                     <span class="subtask-title {% if subtask.status.name == 'Готово' %}text-decoration-line-through{% endif %}">{{ subtask.title }}</span>
                 </label>
