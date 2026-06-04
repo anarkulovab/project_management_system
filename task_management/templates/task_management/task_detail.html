@@ -62,7 +62,7 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h3 style="margin:0;">Подзадачи</h3>
-                {% if task.status.name != 'На проверке' and task.status.name != 'Готово' %}
+                {% if task.status.name != 'На проверке' and task.status.name != 'Готово' and task.status.name != 'Запланирована' %}
                 <a href="{% url 'create-subtask' task.id %}" class="btn btn-sm" style="background: var(--role-member); color: white;">Добавить</a>
                 {% endif %}
             </div>
@@ -76,7 +76,7 @@
                         <span style="color: var(--text-muted);">&#9634;</span>
                         <span style="color: var(--text-main);">{{ subtask.title }}</span>
                     {% endif %}
-                    {% if task.status.name != 'На проверке' and task.status.name != 'Готово' %}
+                    {% if task.status.name != 'На проверке' and task.status.name != 'Готово' and task.status.name != 'Запланирована' %}
                     <a href="{% url 'delete-subtask' subtask.id %}" style="color: var(--danger); font-size: 11px; margin-left: 6px;"
                        onclick="return confirm('Удалить подзадачу?')">x</a>
                     {% endif %}
@@ -100,7 +100,7 @@
             {% empty %}
                 <p style="color: var(--text-muted); font-size: 13px;">Нет комментариев</p>
             {% endfor %}
-            {% if task.status.name != 'Готово' %}
+            {% if task.status.name != 'Готово' and task.status.name != 'Запланирована' %}
             <form method="post" action="{% url 'add-comment' task.id %}" style="margin-top: 12px;">
                 {% csrf_token %}
                 <textarea name="text" rows="2" placeholder="Добавить комментарий..."></textarea>
@@ -129,7 +129,7 @@
         <!-- Действия -->
         <div class="card">
             <h3>Действия</h3>
-            {% if task.status.name != 'На проверке' and task.status.name != 'Готово' %}
+            {% if task.status.name != 'На проверке' and task.status.name != 'Готово' and task.status.name != 'Запланирована' %}
                 {% with pending=task.change_requests.all %}
                     {% if pending and not pending.0.is_approved %}
                         <button class="btn btn-sm mt-2" style="border: 1px solid var(--text-muted); color: var(--text-muted);" disabled>Запрос отправлен</button>

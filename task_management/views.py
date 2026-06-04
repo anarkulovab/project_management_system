@@ -281,9 +281,13 @@ def add_comment(request, task_id):
             if task.assigned_to and request.user == task.project.manager:
                 Notification.objects.create(
                     user=task.assigned_to, task=task,
-                    message=f'Руководитель оставил(а) комментарий к задаче "{task.title}".'
+                    message=f'Руководитель {request.user.get_full_name() or request.user.username} оставил(а) комментарий к задаче "{task.title}".'
                 )
 
+    # Возвращаем туда, откуда пришли
+    referer = request.META.get('HTTP_REFERER', '')
+    if referer:
+        return redirect(referer)
     return redirect('task-detail', task_id=task.id)
 
 

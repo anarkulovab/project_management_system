@@ -77,15 +77,25 @@
             {{ status.name }} <span style="background: rgba(255,255,255,0.3); padding: 1px 8px; border-radius: 10px; margin-left: 6px; font-size: 11px;">{{ status.task_count }}</span>
         </div>
 
-        {% for task in status.filtered_tasks %}
-        <div class="task-card priority-{{ task.priority }}{% if status.name == 'Готово' %} locked{% endif %}"
+                {% for task in status.filtered_tasks %}
+        {% if status.name == 'Запланирована' %}
+        <div class="task-card priority-{{ task.priority }} {% if not task.is_active %}inactive{% endif %}"
              data-task-id="{{ task.id }}"
-             {% if status.name != 'Готово' %}draggable="true" ondragstart="handleDragStart(event)"{% endif %}>
+             {% if task.is_active %}draggable="true" ondragstart="handleDragStart(event)"{% endif %}>
+        {% else %}
+        <div class="task-card priority-{{ task.priority }}{% if status.name == 'Готово' or status.name == 'На проверке' %} locked{% endif %}"
+             data-task-id="{{ task.id }}"
+             {% if status.name != 'Готово' and status.name != 'На проверке' %}draggable="true" ondragstart="handleDragStart(event)"{% endif %}>
+        {% endif %}
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
                     <a href="{% url 'task-detail' task.id %}" class="task-title">{{ task.title }}</a>
                     <div style="display: flex; align-items: center; margin-top: 4px;">
-                        <span class="task-meta">Срок: {{ task.planned_end_date|date:"d.m.Y" }}</span>
+                        {% if status.name == 'Запланирована' %}
+                            <span class="task-meta">Старт: {{ task.start_date_display }}</span>
+                        {% else %}
+                            <span class="task-meta">Срок: {{ task.planned_end_date|date:"d.m.Y" }}</span>
+                        {% endif %}
                         <span class="badge-priority badge-{{ task.priority }}" style="margin-left: 8px;">{{ task.get_priority_display }}</span>
                     </div>
                     <div class="task-meta" style="margin-top: 2px;">
