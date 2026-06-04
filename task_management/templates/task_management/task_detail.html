@@ -6,104 +6,32 @@
 
 {% block extra_head %}
 <style>
-    .detail-grid {
-        display: flex;
-        gap: 24px;
-    }
-    .detail-main {
-        flex: 2;
-    }
-    .detail-side {
-        flex: 1;
-        min-width: 250px;
-    }
-    .card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: var(--shadow);
-    }
-    .card h3 {
-        font-size: 15px;
-        font-weight: 600;
-        color: var(--text-heading);
-        margin-bottom: 16px;
-    }
-    .info-row {
-        display: flex;
-        margin-bottom: 10px;
-        font-size: 14px;
-    }
-    .info-label {
-        color: var(--text-secondary);
-        width: 140px;
-        flex-shrink: 0;
-    }
-    .info-value {
-        color: var(--text-main);
-        font-weight: 500;
-    }
-    .badge-status {
-        font-size: 12px;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 600;
-    }
+    .detail-grid { display: flex; gap: 24px; }
+    .detail-main { flex: 2; }
+    .detail-side { flex: 1; min-width: 250px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); }
+    .card h3 { font-size: 15px; font-weight: 600; color: var(--text-heading); margin-bottom: 16px; }
+    .info-row { display: flex; margin-bottom: 10px; font-size: 14px; }
+    .info-label { color: var(--text-secondary); width: 140px; flex-shrink: 0; }
+    .info-value { color: var(--text-main); font-weight: 500; }
+    .badge-status { font-size: 12px; padding: 4px 12px; border-radius: 20px; font-weight: 600; }
     .status-planned { background: #e0f5f3; color: #7ec8c3; }
     .status-new { background: #d5f5e8; color: #1ABC9C; }
     .status-work { background: #dae8fc; color: #3498DB; }
     .status-review { background: #fef5ee; color: #f0b065; }
     .status-done { background: #e8f8f2; color: #6dbf8b; }
-    .status-blocked { background: #fde9e7; color: #e0857b; }
-
     .priority-high { border-left: 4px solid var(--danger); padding-left: 10px; }
     .priority-medium { border-left: 4px solid var(--warning); padding-left: 10px; }
     .priority-low { border-left: 4px solid var(--success); padding-left: 10px; }
     .priority-critical { border-left: 4px solid #6f42c1; padding-left: 10px; }
-
-    .comment-entry {
-        background: #fafbfe;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 10px;
-    }
+    .comment-entry { background: #fafbfe; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
     .comment-author { font-weight: 600; color: var(--role-member); font-size: 13px; }
     .comment-time { color: var(--text-muted); font-size: 11px; }
-
-    .history-entry {
-        border-left: 2px solid var(--role-member);
-        padding-left: 12px;
-        margin-bottom: 10px;
-        font-size: 13px;
-    }
-
-    .subtask-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 6px;
-        font-size: 13px;
-    }
-
-    textarea {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        font-family: inherit;
-        font-size: 13px;
-        resize: vertical;
-    }
+    .history-entry { border-left: 2px solid var(--role-member); padding-left: 12px; margin-bottom: 10px; font-size: 13px; }
+    .subtask-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+    textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 13px; resize: vertical; }
     textarea:focus { outline: none; border-color: var(--role-member); }
-
-    .btn-sm {
-        padding: 6px 14px;
-        font-size: 12px;
-        border-radius: 8px;
-    }
+    .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 8px; }
 </style>
 {% endblock %}
 
@@ -115,19 +43,18 @@
         <div class="card">
             <h3>Информация о задаче</h3>
             <p style="color: var(--text-secondary); margin-bottom: 20px;">{{ task.description|default:"Описание отсутствует" }}</p>
-
             <div class="info-row"><span class="info-label">Статус</span><span class="info-value">
                 {% with s=task.status.name %}
-                    <span class="badge-status {% if s == 'Запланирована' %}status-planned{% elif s == 'Новая' %}status-new{% elif s == 'В работе' %}status-work{% elif s == 'На проверке' %}status-review{% elif s == 'Готово' %}status-done{% else %}status-blocked{% endif %}">{{ task.status }}</span>
+                    <span class="badge-status {% if s == 'Запланирована' %}status-planned{% elif s == 'Новая' %}status-new{% elif s == 'В работе' %}status-work{% elif s == 'На проверке' %}status-review{% elif s == 'Готово' %}status-done{% endif %}">{{ task.status }}</span>
                 {% endwith %}
             </span></div>
             <div class="info-row"><span class="info-label">Приоритет</span><span class="info-value priority-{{ task.priority }}">{{ task.get_priority_display }}</span></div>
             <div class="info-row"><span class="info-label">Проект</span><span class="info-value"><a href="{% url 'project-detail' task.project.id %}" style="color: var(--primary); text-decoration: none;">{{ task.project.name }}</a></span></div>
-            <div class="info-row"><span class="info-label">Исполнитель</span><span style="color: var(--role-member);">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</span></div>
-            <div class="info-row"><span class="info-label">Автор</span><span style="color: var(--text-secondary);">{{ task.author.get_full_name|default:task.author.username }}</span></div>
+            <div class="info-row"><span class="info-label">Исполнитель</span><span class="info-value" style="color: var(--role-member);">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</span></div>
+            <div class="info-row"><span class="info-label">Автор</span><span class="info-value" style="color: var(--text-secondary);">{{ task.author.get_full_name|default:task.author.username }}</span></div>
             {% if task.planned_start_date %}
-<div class="info-row"><span class="info-label">Дата начала</span><span class="info-value">{{ task.planned_start_date|date:"d.m.Y" }}</span></div>
-{% endif %}
+            <div class="info-row"><span class="info-label">Дата начала</span><span class="info-value">{{ task.planned_start_date|date:"d.m.Y" }}</span></div>
+            {% endif %}
             <div class="info-row"><span class="info-label">Срок</span><span class="info-value" style="{% if task.planned_end_date < now %}color: var(--danger);{% else %}color: var(--success);{% endif %}">{{ task.planned_end_date|date:"d.m.Y" }}</span></div>
         </div>
 
@@ -135,9 +62,9 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h3 style="margin:0;">Подзадачи</h3>
-                {% if task.status.name != 'На проверке' %}
-    <a href="{% url 'create-subtask' task.id %}" class="btn btn-sm" style="background: var(--role-member); color: white;">Добавить</a>
-{% endif %}
+                {% if task.status.name != 'На проверке' and task.status.name != 'Готово' and task.status.name != 'Запланирована' %}
+                <a href="{% url 'create-subtask' task.id %}" class="btn btn-sm" style="background: var(--role-member); color: white;">Добавить</a>
+                {% endif %}
             </div>
             {% if task.subtasks.all %}
                 {% for subtask in task.subtasks.all %}
@@ -147,7 +74,11 @@
                         <span class="text-decoration-line-through" style="color: var(--text-muted);">{{ subtask.title }}</span>
                     {% else %}
                         <span style="color: var(--text-muted);">&#9634;</span>
-                        <a href="{% url 'task-detail' subtask.id %}" style="color: var(--role-member); text-decoration: none;">{{ subtask.title }}</a>
+                        <span style="color: var(--text-main);">{{ subtask.title }}</span>
+                    {% endif %}
+                    {% if task.status.name != 'На проверке' and task.status.name != 'Готово' and task.status.name != 'Запланирована' %}
+                    <a href="{% url 'delete-subtask' subtask.id %}" style="color: var(--danger); font-size: 11px; margin-left: 6px;"
+                       onclick="return confirm('Удалить подзадачу?')">x</a>
                     {% endif %}
                     <span class="badge-status {% if subtask.status.name == 'Готово' %}status-done{% else %}status-new{% endif %}" style="font-size: 10px;">{{ subtask.status.name }}</span>
                 </div>
@@ -169,11 +100,13 @@
             {% empty %}
                 <p style="color: var(--text-muted); font-size: 13px;">Нет комментариев</p>
             {% endfor %}
+            {% if task.status.name != 'Готово' and task.status.name != 'Запланирована' %}
             <form method="post" action="{% url 'add-comment' task.id %}" style="margin-top: 12px;">
                 {% csrf_token %}
                 <textarea name="text" rows="2" placeholder="Добавить комментарий..."></textarea>
                 <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 8px;">Отправить</button>
             </form>
+            {% endif %}
         </div>
     </div>
 
@@ -183,10 +116,9 @@
             <h3>История изменений</h3>
             {% for entry in history %}
                 <div class="history-entry">
-                    <small style="color: var(--text-muted);">{{ entry.changed_at|date:"d.m.Y H:i" }}</small>
-                    <br>
-                    <strong style="color: var(--accent-core);">{{ entry.user.get_full_name|default:entry.user.username }}</strong>
-                    <br><span style="color: var(--text-secondary);">{{ entry.changed_field }}:</span>
+                    <small style="color: var(--text-muted);">{{ entry.changed_at|date:"d.m.Y H:i" }}</small><br>
+                    <strong style="color: var(--accent-core);">{{ entry.user.get_full_name|default:entry.user.username }}</strong><br>
+                    <span style="color: var(--text-secondary);">{{ entry.changed_field }}:</span>
                     {{ entry.old_value }} &rarr; <span style="color: var(--role-member);">{{ entry.new_value }}</span>
                 </div>
             {% empty %}
@@ -194,20 +126,18 @@
             {% endfor %}
         </div>
 
-        <!-- Передать задачу -->
+        <!-- Действия -->
         <div class="card">
             <h3>Действия</h3>
-            {% with pending=task.change_requests.all %}
-    {% if pending and not pending.0.is_approved %}
-        <button class="btn btn-sm mt-2" style="border: 1px solid var(--text-muted); color: var(--text-muted);" disabled>
-            Запрос отправлен
-        </button>
-    {% else %}
-        {% if task.status.name != 'На проверке' %}
-    <a href="{% url 'request-change' task.id %}">Передать задачу</a>
-{% endif %}
-    {% endif %}
-{% endwith %}
+            {% if task.status.name != 'На проверке' and task.status.name != 'Готово' and task.status.name != 'Запланирована' %}
+                {% with pending=task.change_requests.all %}
+                    {% if pending and not pending.0.is_approved %}
+                        <button class="btn btn-sm mt-2" style="border: 1px solid var(--text-muted); color: var(--text-muted);" disabled>Запрос отправлен</button>
+                    {% else %}
+                        <a href="{% url 'request-change' task.id %}" class="btn btn-sm" style="border: 1px solid var(--warning); color: var(--warning);">Передать задачу</a>
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
         </div>
     </div>
 </div>

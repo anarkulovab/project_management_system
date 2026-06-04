@@ -194,7 +194,9 @@
                 <div class="user-avatar">{{ user.username|slice:":2"|upper }}</div>
                 <div>
                     <div>{{ user.get_full_name|default:user.username }}</div>
-                    <div class="user-role">Исполнитель</div>
+                    <div class="user-role">
+    {% if user.groups.all.0.name == 'Руководитель проекта' %}Руководитель{% else %}Исполнитель{% endif %}
+</div>
                 </div>
             </div>
         </header>
