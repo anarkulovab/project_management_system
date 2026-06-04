@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from django.db.models import Count, Sum, Q, Avg
+from django.db.models import Count, Sum, Q, Avg, Max
 from django.utils import timezone
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
