@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from django.db.models import Count, Sum, Q, Avg
+from django.db.models import Count, Sum, Q, Avg, Max
 from django.utils import timezone
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -1050,3 +1050,22 @@ def remove_employee(request, employee_id):
     Employee.objects.filter(manager=request.user, employee_id=employee_id).delete()
     messages.success(request, 'Сотрудник удалён из команды.')
     return redirect('team')
+
+
+@csrf_exempt
+@login_required
+def task_delete_api(request, task_id):
+    """API для удаления задачи."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Метод не поддерживается'}, status=405)
+
+    task = get_object_or_404(Task, id=task_id)
+
+    # Проверяем, что пользователь — руководитель проекта, к которому относится задача
+    if task.project.manager != request.user:
+        return JsonResponse({'error': 'Нет прав на удаление'}, status=403)
+
+    task_title = task.title
+    task.delete()
+
+    return JsonResponse({'success': True, 'message': f'Задача «{task_title}» удалена'})
