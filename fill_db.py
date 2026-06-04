@@ -235,96 +235,80 @@ print('Создаю задачи...')
 now = timezone.now()
 
 # --- Задачи для Анны Петровой (CRM) ---
+# Завершённые
 task_anna_1 = Task.objects.create(
     title='Разработка модуля контактов', project=p1,
     description='CRUD-операции для управления контактами клиентов',
-    priority='high', planned_start_date=now - timedelta(days=14),
-    planned_end_date=now + timedelta(days=7),
-    assigned_to=executor1, author=manager, status=ts_in_progress
+    priority='high', planned_start_date=now - timedelta(days=21),
+    planned_end_date=now - timedelta(days=7),
+    assigned_to=executor1, author=manager, status=ts_done
 )
 task_anna_2 = Task.objects.create(
+    title='Настройка почтовых уведомлений', project=p1,
+    description='Автоматические письма клиентам при изменении статуса сделки',
+    priority='medium', planned_start_date=now - timedelta(days=28),
+    planned_end_date=now - timedelta(days=14),
+    assigned_to=executor1, author=manager, status=ts_done
+)
+task_anna_3 = Task.objects.create(
+    title='Миграция данных из Excel', project=p1,
+    description='Перенос клиентской базы из старых таблиц в CRM',
+    priority='high', planned_start_date=now - timedelta(days=14),
+    planned_end_date=now - timedelta(days=2),
+    assigned_to=executor1, author=manager, status=ts_done
+)
+# В работе и новые
+task_anna_4 = Task.objects.create(
     title='Интеграция с 1С', project=p1,
     description='Настройка обмена данными между CRM и учётной системой',
     priority='critical', planned_start_date=now - timedelta(days=10),
-    planned_end_date=now - timedelta(days=1),
-    assigned_to=executor1, author=manager, status=ts_review
+    planned_end_date=now + timedelta(days=5),
+    assigned_to=executor1, author=manager, status=ts_in_progress
 )
-task_anna_3 = Task.objects.create(
+task_anna_5 = Task.objects.create(
     title='Дашборд для руководителя', project=p1,
     description='Аналитическая панель с графиками по продажам',
     priority='medium', planned_start_date=now + timedelta(days=3),
     planned_end_date=now + timedelta(days=20),
     assigned_to=executor1, author=manager, status=ts_new
 )
-task_anna_4 = Task.objects.create(
+task_anna_6 = Task.objects.create(
     title='Обучение сотрудников', project=p1,
     description='Провести тренинг по работе с новой CRM',
     priority='medium', planned_start_date=now + timedelta(days=14),
     planned_end_date=now + timedelta(days=16),
     assigned_to=executor1, author=manager, status=ts_planned
 )
-task_anna_5 = Task.objects.create(
-    title='Миграция данных из Excel', project=p1,
-    description='Перенос клиентской базы из старых таблиц в CRM',
-    priority='high', planned_start_date=now - timedelta(days=7),
-    planned_end_date=now - timedelta(days=1),  # просрочена (срок вчера)
+# Просроченная
+task_anna_7 = Task.objects.create(
+    title='Аудит безопасности CRM', project=p1,
+    description='Проверка уязвимостей и прав доступа',
+    priority='high', planned_start_date=now - timedelta(days=10),
+    planned_end_date=now - timedelta(days=1),
     assigned_to=executor1, author=manager, status=ts_in_progress
-)
-task_anna_6 = Task.objects.create(
-    title='Настройка почтовых уведомлений', project=p1,
-    description='Автоматические письма клиентам при изменении статуса сделки',
-    priority='medium', planned_start_date=now - timedelta(days=21),
-    planned_end_date=now - timedelta(days=5),
-    assigned_to=executor1, author=manager, status=ts_done
-)
-
-# Подзадачи для «Миграция данных из Excel»
-sub_1 = Task.objects.create(
-    title='Проверить дубликаты', project=p1,
-    description='Найти и удалить повторяющиеся записи клиентов',
-    priority='high', planned_start_date=now - timedelta(days=5),
-    planned_end_date=now - timedelta(days=3),
-    assigned_to=executor1, author=manager, status=ts_done,
-    parent_task=task_anna_5
-)
-sub_2 = Task.objects.create(
-    title='Согласовать формат импорта', project=p1,
-    description='Утвердить структуру CSV-файла с заказчиком',
-    priority='medium', planned_start_date=now - timedelta(days=3),
-    planned_end_date=now + timedelta(days=2),
-    assigned_to=executor1, author=manager, status=ts_new,
-    parent_task=task_anna_5
-)
-sub_3 = Task.objects.create(
-    title='Написать скрипт валидации', project=p1,
-    description='Скрипт проверки корректности данных перед импортом',
-    priority='high', planned_start_date=now + timedelta(days=2),
-    planned_end_date=now + timedelta(days=5),
-    assigned_to=executor1, author=manager, status=ts_new,
-    parent_task=task_anna_5
 )
 
 # --- Задачи для Сергея Смирнова ---
 task_sergey_1 = Task.objects.create(
     title='Дизайн корпоративного портала', project=p3,
     description='Разработать макеты всех страниц портала',
-    priority='high', planned_start_date=now - timedelta(days=10),
-    planned_end_date=now + timedelta(days=10),
-    assigned_to=executor2, author=manager, status=ts_in_progress
+    priority='high', planned_start_date=now - timedelta(days=20),
+    planned_end_date=now - timedelta(days=3),
+    assigned_to=executor2, author=manager, status=ts_done
 )
 task_sergey_2 = Task.objects.create(
+    title='Анимация переходов', project=p2,
+    description='Проработка микроанимаций между экранами приложения',
+    priority='low', planned_start_date=now - timedelta(days=14),
+    planned_end_date=now - timedelta(days=5),
+    assigned_to=executor2, author=manager, status=ts_done
+)
+task_sergey_3 = Task.objects.create(
     title='Дизайн мобильного приложения', project=p2,
     description='Макеты экранов для iOS и Android',
     priority='medium', planned_start_date=now + timedelta(days=5),
     planned_end_date=now + timedelta(days=25),
     assigned_to=executor2, author=manager, status=ts_new
-)
-task_sergey_3 = Task.objects.create(
-    title='Анимация переходов', project=p2,
-    description='Проработка микроанимаций между экранами приложения',
-    priority='low', planned_start_date=now - timedelta(days=3),
-    planned_end_date=now + timedelta(days=7),
-    assigned_to=executor2, author=manager, status=ts_in_progress
 )
 task_sergey_4 = Task.objects.create(
     title='Иконки приложения', project=p2,
@@ -333,28 +317,35 @@ task_sergey_4 = Task.objects.create(
     planned_end_date=now + timedelta(days=17),
     assigned_to=executor2, author=manager, status=ts_planned
 )
+task_sergey_5 = Task.objects.create(
+    title='Баннеры для портала', project=p3,
+    description='Разработать рекламные баннеры для главной страницы',
+    priority='low', planned_start_date=now + timedelta(days=7),
+    planned_end_date=now + timedelta(days=12),
+    assigned_to=executor2, author=manager, status=ts_new
+)
 
 # --- Задачи для Дмитрия Волкова ---
 task_dmitry_1 = Task.objects.create(
     title='Разработка API', project=p2,
     description='REST API для мобильного клиента',
-    priority='high', planned_start_date=now - timedelta(days=5),
-    planned_end_date=now + timedelta(days=15),
-    assigned_to=executor3, author=manager, status=ts_in_progress
+    priority='high', planned_start_date=now - timedelta(days=20),
+    planned_end_date=now - timedelta(days=2),
+    assigned_to=executor3, author=manager, status=ts_done
 )
 task_dmitry_2 = Task.objects.create(
     title='Тестирование API', project=p2,
     description='Написание и прогон автотестов',
-    priority='medium', planned_start_date=now + timedelta(days=16),
-    planned_end_date=now + timedelta(days=25),
+    priority='medium', planned_start_date=now + timedelta(days=3),
+    planned_end_date=now + timedelta(days=15),
     assigned_to=executor3, author=manager, status=ts_new
 )
 task_dmitry_3 = Task.objects.create(
     title='Документация для разработчиков', project=p1,
     description='Описание архитектуры CRM и инструкции по развёртыванию',
-    priority='low', planned_start_date=now + timedelta(days=7),
-    planned_end_date=now + timedelta(days=14),
-    assigned_to=executor3, author=manager, status=ts_planned
+    priority='low', planned_start_date=now - timedelta(days=7),
+    planned_end_date=now - timedelta(days=1),
+    assigned_to=executor3, author=manager, status=ts_done
 )
 task_dmitry_4 = Task.objects.create(
     title='Рефакторинг старого кода', project=p3,
@@ -368,16 +359,16 @@ task_dmitry_4 = Task.objects.create(
 task_elena_1 = Task.objects.create(
     title='Верстка главной страницы', project=p3,
     description='Адаптивная вёрстка главной страницы портала по макетам',
-    priority='high', planned_start_date=now - timedelta(days=7),
-    planned_end_date=now + timedelta(days=5),
-    assigned_to=executor4, author=manager, status=ts_in_progress
+    priority='high', planned_start_date=now - timedelta(days=14),
+    planned_end_date=now - timedelta(days=2),
+    assigned_to=executor4, author=manager, status=ts_done
 )
 task_elena_2 = Task.objects.create(
     title='Верстка личного кабинета', project=p3,
     description='Страница профиля сотрудника с настройками',
-    priority='high', planned_start_date=now - timedelta(days=5),
-    planned_end_date=now - timedelta(days=1),
-    assigned_to=executor4, author=manager, status=ts_review
+    priority='high', planned_start_date=now - timedelta(days=10),
+    planned_end_date=now + timedelta(days=3),
+    assigned_to=executor4, author=manager, status=ts_in_progress
 )
 task_elena_3 = Task.objects.create(
     title='Адаптив под мобильные', project=p3,
@@ -421,25 +412,24 @@ print('✓ Задачи созданы')
 print('Создаю назначения...')
 
 assignments_data = [
-    (task_anna_1, executor1, 32, 18),
-    (task_anna_2, executor1, 24, 22),
-    (task_anna_3, executor1, 40, 0),
-    (task_anna_4, executor1, 8, 0),
-    (task_anna_5, executor1, 16, 10),
-    (task_anna_6, executor1, 8, 8),
-    (sub_1, executor1, 4, 4),
-    (sub_2, executor1, 6, 0),
-    (sub_3, executor1, 8, 0),
-    (task_sergey_1, executor2, 40, 22),
-    (task_sergey_2, executor2, 60, 0),
-    (task_sergey_3, executor2, 16, 8),
+    (task_anna_1, executor1, 40, 38),
+    (task_anna_2, executor1, 16, 16),
+    (task_anna_3, executor1, 24, 20),
+    (task_anna_4, executor1, 32, 18),
+    (task_anna_5, executor1, 40, 0),
+    (task_anna_6, executor1, 8, 0),
+    (task_anna_7, executor1, 16, 10),
+    (task_sergey_1, executor2, 60, 55),
+    (task_sergey_2, executor2, 24, 20),
+    (task_sergey_3, executor2, 60, 0),
     (task_sergey_4, executor2, 12, 0),
-    (task_dmitry_1, executor3, 40, 16),
+    (task_sergey_5, executor2, 16, 0),
+    (task_dmitry_1, executor3, 56, 50),
     (task_dmitry_2, executor3, 30, 0),
-    (task_dmitry_3, executor3, 12, 0),
+    (task_dmitry_3, executor3, 12, 8),
     (task_dmitry_4, executor3, 24, 0),
-    (task_elena_1, executor4, 32, 20),
-    (task_elena_2, executor4, 20, 14),
+    (task_elena_1, executor4, 40, 35),
+    (task_elena_2, executor4, 32, 20),
     (task_elena_3, executor4, 30, 0),
     (task_elena_4, executor4, 12, 0),
 ]
@@ -451,7 +441,6 @@ for task, user, planned, actual in assignments_data:
     )
 
 print('✓ Назначения созданы')
-
 # ---------------------------------------------------
 # 7. КОММЕНТАРИИ
 # ---------------------------------------------------

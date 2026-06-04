@@ -21,43 +21,98 @@ from task_management.models import ExecutorChangeRequest
 @login_required
 def dashboard(request):
     """Функция для вывода дашборда"""
-    # Только проекты текущего руководителя
     projects = Project.objects.filter(manager=request.user)
     total_projects = projects.count()
     active_projects = projects.filter(status__name='Активен').count()
     completed_projects = projects.filter(status__name='Завершён').count()
 
-    # Просроченные задачи только по проектам руководителя
-    overdue_tasks = Task.objects.filter(project__manager=request.user, planned_end_date__lt=timezone.now()).exclude(status__name='Готово').count()
+    overdue_tasks = Task.objects.filter(
+        project__manager=request.user,
+        planned_end_date__lt=timezone.now()
+    ).exclude(status__name='Готово').count()
 
-    # Загрузка — только по задачам проектов руководителя
     assignments = TaskAssignment.objects.filter(task__project__manager=request.user)
     total_planned = assignments.aggregate(total=models.Sum('planned_hours'))['total'] or 0
     total_actual = assignments.aggregate(total=models.Sum('actual_hours'))['total'] or 0
     avg_utilization = round((total_actual / total_planned * 100)) if total_planned > 0 else 0
 
+    # === Генерация KPI для всех проектов руководителя ===
+    today_start = datetime.combine(date.today(), datetime.min.time())
+    for project in projects:
+        # Пропускаем, если сегодня уже считали
+        if KPI.objects.filter(project=project, calculated_at__gte=today_start).exists():
+            continue
+
+        tasks = Task.objects.filter(project=project)
+        total_tasks = tasks.count()
+        completed_tasks = tasks.filter(status__name='Готово').count()
+        overdue = tasks.filter(
+            planned_end_date__lt=timezone.now()
+        ).exclude(status__name='Готово').count()
+
+        progress = int((completed_tasks / total_tasks * 100)) if total_tasks > 0 else 0
+        overdue_rate = int((overdue / total_tasks * 100)) if total_tasks > 0 else 0
+
+        # Расчёт утилизации ресурсов по проекту
+        participants = project.participants.all()
+        total_utilization = 0
+        if participants:
+            for user in participants:
+                user_assignments = TaskAssignment.objects.filter(user=user, task__project=project)
+                planned = user_assignments.aggregate(total=models.Sum('planned_hours'))['total'] or 0
+                actual = user_assignments.aggregate(total=models.Sum('actual_hours'))['total'] or 0
+                if planned > 0:
+                    total_utilization += int((actual / planned * 100))
+            avg_util = int(total_utilization / participants.count())
+        else:
+            avg_util = 0
+
+        # Создаём четыре KPI-записи
+        kpi_values = [
+            ('Процент выполнения', progress),
+            ('Индекс соблюдения сроков', 100 - overdue_rate),
+            ('Использование ресурсов', avg_util),
+            ('Доля просроченных задач', overdue_rate),
+        ]
+        for name, value in kpi_values:
+            KPI.objects.create(project=project, name=name, value=value)
+
     # Данные для графиков
     project_names = [p.name for p in projects[:5]]
     project_progress = []
     for p in projects[:5]:
-        kpi = KPI.objects.filter(project=p, name='Процент выполнения').first()
+        kpi = KPI.objects.filter(project=p, name='Процент выполнения').order_by('-calculated_at').first()
         project_progress.append(float(kpi.value) if kpi else 0)
 
-    # Статусы задач: выводятся только по проектам руководителя
+    # Статусы задач
     task_statuses = Task.objects.filter(project__manager=request.user).values('status__name').annotate(count=models.Count('id'))
     status_labels = [ts['status__name'] for ts in task_statuses]
     status_counts = [ts['count'] for ts in task_statuses]
 
     # Таблица проектов
     project_list = projects[:10]
-    kpi_list = KPI.objects.filter(project__manager=request.user)[:20]
+    latest_kpi_ids = KPI.objects.filter(
+        project__manager=request.user,
+        name='Процент выполнения'
+    ).values('project_id').annotate(
+        max_id=Max('id')
+    ).values_list('max_id', flat=True)
+    kpi_list = KPI.objects.filter(id__in=latest_kpi_ids)
 
     context = {
-        'total_projects': total_projects, 'active_projects': active_projects, 'completed_projects': completed_projects, 'overdue_tasks': overdue_tasks,
-        'avg_utilization': avg_utilization, 'project_names': project_names, 'project_progress': project_progress, 'status_labels': status_labels,
-        'status_counts': status_counts, 'project_list': project_list, 'kpi_list': kpi_list,}
+        'total_projects': total_projects,
+        'active_projects': active_projects,
+        'completed_projects': completed_projects,
+        'overdue_tasks': overdue_tasks,
+        'avg_utilization': avg_utilization,
+        'project_names': project_names,
+        'project_progress': project_progress,
+        'status_labels': status_labels,
+        'status_counts': status_counts,
+        'project_list': project_list,
+        'kpi_list': kpi_list,
+    }
     return render(request, 'resource_planning/dashboard.html', context)
-
 
 @login_required
 def project_list(request):
