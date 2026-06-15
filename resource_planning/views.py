@@ -703,7 +703,7 @@ def team(request):
             task__planned_end_date__lte=week_end
         ).aggregate(total=models.Sum('planned_hours'))['total'] or 0
 
-        available = 40
+        available = 160  # месячный фонд (4 недели × 40 часов)
         load_percent = int((planned / available) * 100) if available > 0 else 0
 
         team_data.append({
@@ -1069,3 +1069,37 @@ def task_delete_api(request, task_id):
     task.delete()
 
     return JsonResponse({'success': True, 'message': f'Задача «{task_title}» удалена'})
+
+
+@csrf_exempt
+@login_required
+def task_edit_api(request, task_id):
+    """API для редактирования задачи."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Метод не поддерживается'}, status=405)
+
+    task = get_object_or_404(Task, id=task_id)
+    if task.project.manager != request.user:
+        return JsonResponse({'error': 'Нет прав на редактирование'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Некорректный JSON'}, status=400)
+
+    if 'title' in data:
+        task.title = data['title']
+    if 'description' in data:
+        task.description = data['description']
+    if 'priority' in data:
+        task.priority = data['priority']
+    if 'planned_end_date' in data:
+        task.planned_end_date = datetime.fromisoformat(data['planned_end_date'])
+    if 'assignee_id' in data and data['assignee_id']:
+        try:
+            task.assigned_to = User.objects.get(id=int(data['assignee_id']))
+        except User.DoesNotExist:
+            pass
+
+    task.save()
+    return JsonResponse({'success': True, 'message': f'Задача «{task.title}» обновлена'})
