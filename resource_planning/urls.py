@@ -29,4 +29,6 @@ urlpatterns = [
     path('calendar/tasks-api/', views.all_tasks_api, name='all_tasks_api'),
     path('notifications/mark-all-read/', views.mark_all_read, name='mark_all_read'),
     path('team/remove/<int:employee_id>/', views.remove_employee, name='remove_employee'),
+    path('task/<int:task_id>/delete/', views.task_delete_api, name='task_delete'),
+    path('task/<int:task_id>/edit/', views.task_edit_api, name='task_edit'),
 ]

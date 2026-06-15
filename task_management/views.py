@@ -266,7 +266,8 @@ def add_comment(request, task_id):
 
     if task.status.name == 'Готово':
         messages.error(request, 'Нельзя комментировать завершённую задачу.')
-        return redirect('task-detail', task_id=task.id)
+        #return redirect('task-detail', task_id=task.id)
+        return redirect(request.META.get('HTTP_REFERER', 'task-detail'))
 
     if request.method == 'POST':
         text = request.POST.get('text')
